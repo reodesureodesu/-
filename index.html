@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TapApp Studio</title>
   <style>
-    :root{--bg:#eef2f7;--panel:#fff;--line:#d8e0ea;--text:#1f2937;--muted:#6b7280;--accent:#2563eb;--soft:#dbeafe}
+    :root{--bg:#f5f7fb;--panel:#ffffff;--line:#e4e8f0;--text:#1f2937;--muted:#6b7280;--accent:#5b7cff;--soft:#dbe5ff}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Inter,"Noto Sans JP",sans-serif;color:var(--text)}
     .app{min-height:100vh;display:grid;grid-template-columns:300px 1fr 320px;gap:12px;padding:12px}
-    .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;overflow:auto;box-shadow:0 8px 26px rgba(15,23,42,.06)}
     .small{font-size:.84rem;color:var(--muted)} .stack{display:grid;gap:10px} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     input,select,textarea,button{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit}
     button{background:#fff;cursor:pointer} button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 
     .builder{display:grid;grid-template-rows:auto auto 1fr;gap:10px}
-    .chip-row{display:flex;flex-wrap:wrap;gap:8px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:8px}
-    .chip{padding:8px 10px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-size:.82rem;user-select:none;cursor:pointer}
+    .chip-row{display:flex;flex-wrap:wrap;gap:8px;background:linear-gradient(180deg,#fbfcff,#f6f8ff);border:1px solid var(--line);border-radius:14px;padding:10px}
+    .chip{padding:8px 12px;border:1px solid #d7ddeb;border-radius:999px;background:#fff;font-size:.82rem;user-select:none;cursor:pointer;box-shadow:0 2px 0 rgba(15,23,42,.03)}
     .chip.active{background:#0f172a;color:#fff;border-color:#0f172a}
 
-    .stage-wrap{position:relative;background:linear-gradient(180deg,#f6f9ff,#fcfdff);border:1px dashed #adc0d9;border-radius:16px;padding:12px;display:grid;place-items:center;min-height:560px;overflow:auto}
+    .stage-wrap{position:relative;background:linear-gradient(180deg,#f7f9ff,#fcfdff);border:1px dashed #bfd0f2;border-radius:20px;padding:12px;display:grid;place-items:center;min-height:560px;overflow:auto}
     .phone{width:390px;height:844px;border:2px solid #c7d5e6;border-radius:24px;background:#fff;position:relative;overflow:hidden;transform-origin:top center}
     .show-grid{background-image:linear-gradient(to right,rgba(219,234,254,.45) 1px,transparent 1px),linear-gradient(to bottom,rgba(219,234,254,.45) 1px,transparent 1px);background-size:20px 20px}
 
@@ -54,7 +54,10 @@
       <label class="small">Provider</label>
       <select id="provider"><option value="openai">OpenAI API</option><option value="hf">Hugging Face Inference API</option></select>
       <label class="small">API Key</label><input id="apiKey" type="password" placeholder="sk-... / hf_..." />
-      <label class="small">モデル名</label><input id="model" placeholder="gpt-4o-mini / Qwen/Qwen2.5-Coder-32B-Instruct" />
+      <label class="small">モデル（主要プリセット）</label>
+      <select id="modelPreset"></select>
+      <label class="small">カスタムモデル（任意）</label>
+      <input id="modelCustom" placeholder="空欄なら上のプリセットを使用" />
       <label class="small">要件</label><textarea id="prompt" placeholder="例: 予約アプリ。上に見出し、中央に説明、下に開始風の要素"></textarea>
       <button id="generateBtn" class="primary">AIで初期レイアウト生成</button>
       <div id="aiStatus" class="status"></div>
@@ -98,7 +101,18 @@ const base={w:390,h:844};
 const types=["heading","text","button","input","card"];
 const defaults={heading:{text:"見出し",w:260,h:58,fontSize:24},text:{text:"テキスト",w:260,h:50,fontSize:16},button:{text:"開始",w:180,h:48,fontSize:16,bg:"#2563eb",color:"#fff"},input:{text:"入力してください",w:250,h:46,fontSize:15,bg:"#f8fafc"},card:{text:"カード",w:280,h:120,fontSize:16,bg:"#fff"}};
 const $=id=>document.getElementById(id);
-const ui={phone:$("phone"),bubble:$("bubble"),addRow:$("addRow"),toolRow:$("toolRow"),zoom:$("zoom"),zoomLabel:$("zoomLabel"),preview:$("preview"),closePreview:$("closePreview"),pvMobile:$("pvMobile"),pvTablet:$("pvTablet"),pvDesktop:$("pvDesktop"),provider:$("provider"),apiKey:$("apiKey"),model:$("model"),prompt:$("prompt"),generateBtn:$("generateBtn"),aiStatus:$("aiStatus"),saveStatus:$("saveStatus"),editStatus:$("editStatus"),propText:$("propText"),propBg:$("propBg"),propColor:$("propColor"),propBorderColor:$("propBorderColor"),propBorderWidth:$("propBorderWidth"),propRadius:$("propRadius"),propPadding:$("propPadding"),propFont:$("propFont"),propOpacity:$("propOpacity"),propRotate:$("propRotate"),propW:$("propW"),propH:$("propH"),propX:$("propX"),propY:$("propY")};
+const ui={phone:$("phone"),bubble:$("bubble"),addRow:$("addRow"),toolRow:$("toolRow"),zoom:$("zoom"),zoomLabel:$("zoomLabel"),preview:$("preview"),closePreview:$("closePreview"),pvMobile:$("pvMobile"),pvTablet:$("pvTablet"),pvDesktop:$("pvDesktop"),provider:$("provider"),apiKey:$("apiKey"),modelPreset:$("modelPreset"),modelCustom:$("modelCustom"),prompt:$("prompt"),generateBtn:$("generateBtn"),aiStatus:$("aiStatus"),saveStatus:$("saveStatus"),editStatus:$("editStatus"),propText:$("propText"),propBg:$("propBg"),propColor:$("propColor"),propBorderColor:$("propBorderColor"),propBorderWidth:$("propBorderWidth"),propRadius:$("propRadius"),propPadding:$("propPadding"),propFont:$("propFont"),propOpacity:$("propOpacity"),propRotate:$("propRotate"),propW:$("propW"),propH:$("propH"),propX:$("propX"),propY:$("propY")};
+const modelPresets={
+  openai:["gpt-4o-mini","gpt-4.1-mini","gpt-4.1","o4-mini"],
+  hf:["Qwen/Qwen2.5-Coder-32B-Instruct","meta-llama/Llama-3.1-8B-Instruct","mistralai/Mistral-7B-Instruct-v0.3","google/gemma-2-9b-it"]
+};
+function refreshModelPreset(){
+  const list=modelPresets[ui.provider.value]||[];
+  ui.modelPreset.innerHTML='';
+  list.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;ui.modelPreset.appendChild(o)});
+}
+function resolvedModel(){return ui.modelCustom.value.trim()||ui.modelPreset.value.trim();}
+
 
 function makeNode(type,x=30,y=30){const d=defaults[type]||defaults.text;return {id:crypto.randomUUID(),type,text:d.text,x,y,w:d.w,h:d.h,z:Date.now(),style:{bg:d.bg||"#fff",color:d.color||"#111827",borderColor:"#2563eb",borderWidth:0,radius:10,padding:10,fontSize:d.fontSize||16,opacity:100,rotate:0}}}
 let state=JSON.parse(localStorage.getItem("tapapp-state")||"null")||{options:{grid:true,snap:true,zoom:100},nodes:[makeNode("heading",24,32),makeNode("text",24,102),makeNode("button",24,170)]};
@@ -156,6 +170,7 @@ ui.addRow.addEventListener('click',e=>{const t=e.target.closest('[data-add]');if
 ui.toolRow.addEventListener('click',e=>{const t=e.target.closest('[data-tool]');if(!t)return;const a=t.dataset.tool; if(a==='undo')undo(); if(a==='redo')redo(); if(a==='grid'){state.options.grid=!state.options.grid;render();} if(a==='snap'){state.options.snap=!state.options.snap;render();} if(a==='preview'){ui.preview.classList.add('open')}});
 ui.closePreview.onclick=()=>ui.preview.classList.remove('open'); ui.preview.onclick=e=>{if(e.target===ui.preview)ui.preview.classList.remove('open')};
 ui.zoom.oninput=()=>{state.options.zoom=+ui.zoom.value;render()};
+ui.provider.onchange=()=>{refreshModelPreset();};
 [ui.propText,ui.propBg,ui.propColor,ui.propBorderColor,ui.propBorderWidth,ui.propRadius,ui.propPadding,ui.propFont,ui.propOpacity,ui.propRotate,ui.propW,ui.propH,ui.propX,ui.propY].forEach(i=>i.addEventListener('input',applyLive));
 
 document.querySelectorAll('.palette').forEach((pal)=>{
@@ -169,14 +184,22 @@ document.querySelectorAll('.palette').forEach((pal)=>{
     applyLive();
   });
 });
-ui.generateBtn.onclick=async()=>{const key=ui.apiKey.value.trim(),prompt=ui.prompt.value.trim();if(!key||!prompt){ui.aiStatus.textContent='APIキーと要件を入力してください。';return}ui.generateBtn.disabled=true;ui.aiStatus.textContent='AIで生成中...';
-try{const raw=ui.provider.value==='openai'?await callOpenAI({key,model:ui.model.value.trim(),prompt}):await callHF({key,model:ui.model.value.trim(),prompt});const p=extractJson(raw);if(!p)throw new Error();applyGenerated(p);ui.aiStatus.textContent='AIレイアウトを反映しました。'}
+ui.generateBtn.onclick=async()=>{const key=ui.apiKey.value.trim(),prompt=ui.prompt.value.trim();
+localStorage.setItem('tapapp-api-key',key);localStorage.setItem('tapapp-provider',ui.provider.value);localStorage.setItem('tapapp-model-preset',ui.modelPreset.value);localStorage.setItem('tapapp-model-custom',ui.modelCustom.value.trim());if(!key||!prompt){ui.aiStatus.textContent='APIキーと要件を入力してください。';return}ui.generateBtn.disabled=true;ui.aiStatus.textContent='AIで生成中...';
+try{const raw=ui.provider.value==='openai'?await callOpenAI({key,model:resolvedModel(),prompt}):await callHF({key,model:resolvedModel(),prompt});const p=extractJson(raw);if(!p)throw new Error();applyGenerated(p);ui.aiStatus.textContent='AIレイアウトを反映しました。'}
 catch{applyGenerated({elements:[{type:'heading',text:'テンプレート',x:24,y:28,w:250,h:56,style:{bg:'#fff7ed',color:'#9a3412',radius:12,padding:10,fontSize:22}},{type:'text',text:prompt,x:24,y:96,w:320,h:120,style:{bg:'#fff',color:'#334155',radius:10,padding:10,fontSize:16}},{type:'button',text:'開始',x:24,y:230,w:150,h:48,style:{bg:'#2563eb',color:'#fff',radius:10,padding:10,fontSize:16}}]});ui.aiStatus.textContent='AI解析失敗のためテンプレートを作成しました。'}
 finally{ui.generateBtn.disabled=false}};
 
 window.addEventListener('keydown',e=>{const n=sel();if(!n)return;const ks=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];if(!ks.includes(e.key))return;const tag=document.activeElement?.tagName?.toLowerCase();if(['input','textarea','select'].includes(tag))return;e.preventDefault();snapshot();const st=e.shiftKey?10:2;if(e.key==='ArrowLeft')n.x=clamp(n.x-st,0,base.w-n.w);if(e.key==='ArrowRight')n.x=clamp(n.x+st,0,base.w-n.w);if(e.key==='ArrowUp')n.y=clamp(n.y-st,0,base.h-n.h);if(e.key==='ArrowDown')n.y=clamp(n.y+st,0,base.h-n.h);render()});
 
-(function boot(){ui.apiKey.value=localStorage.getItem('tapapp-api-key')||'';ui.provider.value=localStorage.getItem('tapapp-provider')||'openai';ui.model.value=localStorage.getItem('tapapp-model')||'';state.nodes=(state.nodes||[]).map(norm);if(!state.nodes.length)state.nodes=[makeNode('heading')];selectedId=state.nodes[0].id;state.options.zoom=clamp(+state.options.zoom||100,50,140);setupBubble();render()})();
+(function boot(){ui.apiKey.value=localStorage.getItem('tapapp-api-key')||'';refreshModelPreset();
+const savedProvider=localStorage.getItem('tapapp-provider')||'openai';
+ui.provider.value=savedProvider;
+refreshModelPreset();
+const savedCustom=localStorage.getItem('tapapp-model-custom')||'';
+const savedPreset=localStorage.getItem('tapapp-model-preset')||'';
+ui.modelCustom.value=savedCustom;
+if(savedPreset) ui.modelPreset.value=savedPreset;state.nodes=(state.nodes||[]).map(norm);if(!state.nodes.length)state.nodes=[makeNode('heading')];selectedId=state.nodes[0].id;state.options.zoom=clamp(+state.options.zoom||100,50,140);setupBubble();render()})();
 </script>
 </body>
 </html>
