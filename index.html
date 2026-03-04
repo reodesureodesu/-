@@ -1,1 +1,567 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TapApp Studio</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Inter", "Noto Sans JP", system-ui, sans-serif;
+        --bg: #eef2f7;
+        --panel: #ffffff;
+        --text: #18212f;
+        --muted: #5f6b7b;
+        --accent: #3b82f6;
+        --accent-soft: #dbeafe;
+        --border: #d9e0ea;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); }
+      .app { min-height: 100vh; display: grid; grid-template-columns: 320px 1fr 320px; gap: 14px; padding: 14px; }
+      .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; overflow: auto; }
+      h1, h2, h3 { margin: 0 0 10px; }
+      h1 { font-size: 1.2rem; }
+      h2 { font-size: 1.05rem; }
+      h3 { font-size: 0.95rem; color: var(--muted); }
+      .small { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+      .stack { display: grid; gap: 10px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      textarea, input, select, button { font: inherit; width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+      textarea { min-height: 88px; resize: vertical; }
+      button { background: white; cursor: pointer; }
+      button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .builder { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; }
+      .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+      .toolbar button { width: auto; padding: 8px 12px; }
+      .quick-row { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
+      .canvas {
+        background: linear-gradient(180deg, #f4f8ff, #fdfdff);
+        border: 1px dashed #b4c2d6;
+        border-radius: 16px;
+        padding: 16px;
+        min-height: 520px;
+        display: grid;
+        gap: 10px;
+        align-content: start;
+      }
+      .element {
+        border: 1px solid transparent;
+        border-radius: 10px;
+        transition: 0.2s;
+        position: relative;
+        min-height: 44px;
+        display: grid;
+        align-content: center;
+      }
+      .element-content { outline: none; width: 100%; }
+      .element.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+      .element.dragging { opacity: 0.55; }
+      .element.drop-target { box-shadow: 0 0 0 3px #fde68a; }
+      .drag-handle {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: 0.75rem;
+        color: #1d4ed8;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
+      .footer { border-top: 1px solid var(--border); padding-top: 10px; }
+      .status { font-size: 0.85rem; color: var(--muted); min-height: 1.2em; }
+      .badge { display: inline-block; font-size: 0.75rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 999px; padding: 3px 8px; }
+      @media (max-width: 1100px) {
+        .app { grid-template-columns: 1fr; }
+        .canvas { min-height: 330px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel stack">
+        <div>
+          <h1>TapApp Studio</h1>
+          <p class="small">より直感的にするため、ドラッグ並び替え・ダブルタップ編集・複製・上下移動に対応しました。</p>
+        </div>
 
+        <div class="stack">
+          <h2>1) AIで下書きを作る</h2>
+          <label class="small">使うAI</label>
+          <select id="provider">
+            <option value="openai">OpenAI API</option>
+            <option value="hf">Hugging Face Inference API</option>
+          </select>
+
+          <label class="small">API Key（ブラウザ保存）</label>
+          <input id="apiKey" type="password" placeholder="sk-... / hf_..." />
+
+          <label class="small">モデル名</label>
+          <input id="model" placeholder="例: gpt-4o-mini / Qwen/Qwen2.5-Coder-32B-Instruct" />
+
+          <label class="small">作りたいアプリ内容</label>
+          <textarea id="prompt" placeholder="例: 家計簿アプリ。上に月次サマリー、下に履歴一覧、右下に追加"></textarea>
+
+          <button id="generateBtn" class="primary">AIでUI構成を生成</button>
+          <div id="aiStatus" class="status"></div>
+          <p class="small">失敗時はテンプレートに自動フォールバックします。</p>
+        </div>
+      </section>
+
+      <section class="panel builder">
+        <div>
+          <h2>2) タップ&ドラッグで組み立てる</h2>
+          <div class="toolbar">
+            <button data-add="heading">見出し</button>
+            <button data-add="text">テキスト</button>
+            <button data-add="button">ボタン</button>
+            <button data-add="input">入力欄</button>
+            <button data-add="card">カード</button>
+          </div>
+        </div>
+
+        <div class="quick-row stack">
+          <div class="small">選択中に対してクイック操作</div>
+          <div class="grid-3">
+            <button id="moveUpBtn">↑ 上へ</button>
+            <button id="moveDownBtn">↓ 下へ</button>
+            <button id="duplicateBtn">複製</button>
+          </div>
+        </div>
+
+        <div id="canvas" class="canvas"></div>
+
+        <div class="footer stack">
+          <div class="grid-2">
+            <button id="saveBtn">作業を保存</button>
+            <button id="loadBtn">続きから再開</button>
+          </div>
+          <div class="grid-2">
+            <button id="exportBtn">JSONエクスポート</button>
+            <button id="deployGuideBtn">Vercelデプロイ手順</button>
+          </div>
+          <div id="saveStatus" class="status"></div>
+        </div>
+      </section>
+
+      <section class="panel stack">
+        <div>
+          <h2>3) 選択中の要素を編集</h2>
+          <p class="small">キャンバス上でダブルタップ（PCはダブルクリック）でも文字を直接編集できます。</p>
+        </div>
+
+        <label class="small">内容テキスト</label>
+        <input id="propText" placeholder="テキスト" />
+
+        <label class="small">背景色</label>
+        <input id="propBg" type="color" value="#ffffff" />
+
+        <label class="small">文字色</label>
+        <input id="propColor" type="color" value="#18212f" />
+
+        <label class="small">角丸(px)</label>
+        <input id="propRadius" type="range" min="0" max="40" value="10" />
+
+        <label class="small">余白(px)</label>
+        <input id="propPadding" type="range" min="4" max="36" value="10" />
+
+        <label class="small">文字サイズ(px)</label>
+        <input id="propFontSize" type="range" min="12" max="36" value="16" />
+
+        <div class="grid-2">
+          <button id="applyBtn" class="primary">変更を適用</button>
+          <button id="deleteBtn">要素を削除</button>
+        </div>
+
+        <div id="editStatus" class="status"></div>
+      </section>
+    </main>
+
+    <script>
+      const defaultState = {
+        elements: [
+          { id: crypto.randomUUID(), type: "heading", text: "ようこそ", style: { bg: "#ffffff", color: "#18212f", radius: 10, padding: 10, fontSize: 22 } },
+          { id: crypto.randomUUID(), type: "text", text: "左からAI生成、中央で直感編集、右で微調整できます。", style: { bg: "#ffffff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } }
+        ]
+      };
+
+      let state = JSON.parse(localStorage.getItem("tapapp-state") || "null") || defaultState;
+      let selectedId = state.elements[0]?.id ?? null;
+      let draggingId = null;
+
+      const ui = {
+        canvas: document.getElementById("canvas"),
+        addButtons: [...document.querySelectorAll("[data-add]")],
+        propText: document.getElementById("propText"),
+        propBg: document.getElementById("propBg"),
+        propColor: document.getElementById("propColor"),
+        propRadius: document.getElementById("propRadius"),
+        propPadding: document.getElementById("propPadding"),
+        propFontSize: document.getElementById("propFontSize"),
+        applyBtn: document.getElementById("applyBtn"),
+        deleteBtn: document.getElementById("deleteBtn"),
+        moveUpBtn: document.getElementById("moveUpBtn"),
+        moveDownBtn: document.getElementById("moveDownBtn"),
+        duplicateBtn: document.getElementById("duplicateBtn"),
+        editStatus: document.getElementById("editStatus"),
+        saveBtn: document.getElementById("saveBtn"),
+        loadBtn: document.getElementById("loadBtn"),
+        exportBtn: document.getElementById("exportBtn"),
+        deployGuideBtn: document.getElementById("deployGuideBtn"),
+        saveStatus: document.getElementById("saveStatus"),
+        provider: document.getElementById("provider"),
+        apiKey: document.getElementById("apiKey"),
+        model: document.getElementById("model"),
+        prompt: document.getElementById("prompt"),
+        generateBtn: document.getElementById("generateBtn"),
+        aiStatus: document.getElementById("aiStatus")
+      };
+
+      const allowedTypes = ["heading", "text", "button", "input", "card"];
+      const getById = (id) => state.elements.find((e) => e.id === id);
+      const selected = () => getById(selectedId);
+
+      function normalizeStyle(style = {}, type = "text") {
+        const defaults = { heading: 22, text: 16, button: 16, input: 16, card: 16 };
+        return {
+          bg: style.bg || "#ffffff",
+          color: style.color || "#18212f",
+          radius: Number(style.radius ?? 10),
+          padding: Number(style.padding ?? 10),
+          fontSize: Number(style.fontSize ?? defaults[type] ?? 16)
+        };
+      }
+
+      function elementTag(type) {
+        if (type === "heading") return "h3";
+        if (type === "button") return "button";
+        if (type === "input") return "input";
+        return "div";
+      }
+
+      function markStatus(msg) { ui.editStatus.textContent = msg; }
+
+      function render() {
+        ui.canvas.innerHTML = "";
+        state.elements.forEach((item) => {
+          item.style = normalizeStyle(item.style, item.type);
+          const wrap = document.createElement("div");
+          wrap.className = `element ${item.id === selectedId ? "selected" : ""}`;
+          wrap.draggable = true;
+          wrap.dataset.id = item.id;
+          wrap.style.background = item.style.bg;
+          wrap.style.color = item.style.color;
+          wrap.style.borderRadius = `${item.style.radius}px`;
+          wrap.style.padding = `${item.style.padding}px`;
+          wrap.style.fontSize = `${item.style.fontSize}px`;
+
+          const handle = document.createElement("span");
+          handle.className = "drag-handle";
+          handle.textContent = "↕ 並び替え";
+          wrap.appendChild(handle);
+
+          const tag = elementTag(item.type);
+          const node = document.createElement(tag);
+          node.className = "element-content";
+          if (item.type === "input") {
+            node.value = item.text;
+            node.placeholder = item.text;
+            node.readOnly = true;
+          } else {
+            node.textContent = item.text;
+          }
+
+          wrap.onclick = () => {
+            selectedId = item.id;
+            syncEditor();
+            render();
+          };
+
+          wrap.ondblclick = () => enableInlineEdit(item.id, node);
+
+          wrap.ondragstart = (e) => {
+            draggingId = item.id;
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", item.id);
+            wrap.classList.add("dragging");
+          };
+          wrap.ondragend = () => {
+            draggingId = null;
+            wrap.classList.remove("dragging");
+            [...ui.canvas.querySelectorAll(".drop-target")].forEach((n) => n.classList.remove("drop-target"));
+          };
+          wrap.ondragover = (e) => {
+            e.preventDefault();
+            if (draggingId && draggingId !== item.id) wrap.classList.add("drop-target");
+          };
+          wrap.ondragleave = () => wrap.classList.remove("drop-target");
+          wrap.ondrop = (e) => {
+            e.preventDefault();
+            reorder(draggingId, item.id);
+          };
+
+          wrap.appendChild(node);
+          ui.canvas.appendChild(wrap);
+        });
+        syncEditor();
+      }
+
+      function enableInlineEdit(id, node) {
+        const item = getById(id);
+        if (!item || item.type === "input") return;
+        node.contentEditable = "true";
+        node.focus();
+        document.execCommand("selectAll", false, null);
+        markStatus("インライン編集モード: Enter または外側タップで確定");
+        const done = () => {
+          node.contentEditable = "false";
+          item.text = node.textContent.trim() || "（空）";
+          ui.propText.value = item.text;
+          markStatus("インライン編集を反映しました。");
+        };
+        node.onblur = done;
+        node.onkeydown = (ev) => {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            node.blur();
+          }
+        };
+      }
+
+      function syncEditor() {
+        const s = selected();
+        const disabled = !s;
+        [ui.propText, ui.propBg, ui.propColor, ui.propRadius, ui.propPadding, ui.propFontSize, ui.applyBtn, ui.deleteBtn, ui.moveUpBtn, ui.moveDownBtn, ui.duplicateBtn].forEach((n) => n.disabled = disabled);
+        if (!s) return;
+        ui.propText.value = s.text;
+        ui.propBg.value = s.style.bg;
+        ui.propColor.value = s.style.color;
+        ui.propRadius.value = s.style.radius;
+        ui.propPadding.value = s.style.padding;
+        ui.propFontSize.value = s.style.fontSize;
+      }
+
+      function addElement(type) {
+        const map = {
+          heading: "新しい見出し",
+          text: "新しいテキスト",
+          button: "アクション",
+          input: "入力してください",
+          card: "カードコンテンツ"
+        };
+        const next = {
+          id: crypto.randomUUID(),
+          type,
+          text: map[type],
+          style: normalizeStyle({}, type)
+        };
+        state.elements.push(next);
+        selectedId = next.id;
+        markStatus("要素を追加しました。ドラッグで並び替えできます。");
+        render();
+      }
+
+      function reorder(sourceId, targetId) {
+        if (!sourceId || !targetId || sourceId === targetId) return;
+        const list = state.elements;
+        const from = list.findIndex((e) => e.id === sourceId);
+        const to = list.findIndex((e) => e.id === targetId);
+        if (from < 0 || to < 0) return;
+        const [moved] = list.splice(from, 1);
+        list.splice(to, 0, moved);
+        selectedId = moved.id;
+        markStatus("並び順を変更しました。");
+        render();
+      }
+
+      function moveSelected(offset) {
+        const i = state.elements.findIndex((e) => e.id === selectedId);
+        const j = i + offset;
+        if (i < 0 || j < 0 || j >= state.elements.length) return;
+        [state.elements[i], state.elements[j]] = [state.elements[j], state.elements[i]];
+        markStatus("順序を移動しました。");
+        render();
+      }
+
+      function duplicateSelected() {
+        const s = selected();
+        if (!s) return;
+        const copy = {
+          id: crypto.randomUUID(),
+          type: s.type,
+          text: `${s.text} (コピー)`,
+          style: { ...s.style }
+        };
+        const idx = state.elements.findIndex((e) => e.id === s.id);
+        state.elements.splice(idx + 1, 0, copy);
+        selectedId = copy.id;
+        markStatus("要素を複製しました。");
+        render();
+      }
+
+      function saveState(msg = "保存しました。") {
+        localStorage.setItem("tapapp-state", JSON.stringify(state));
+        localStorage.setItem("tapapp-api-key", ui.apiKey.value.trim());
+        localStorage.setItem("tapapp-provider", ui.provider.value);
+        localStorage.setItem("tapapp-model", ui.model.value.trim());
+        ui.saveStatus.textContent = msg;
+      }
+
+      function loadState() {
+        const loaded = JSON.parse(localStorage.getItem("tapapp-state") || "null");
+        if (!loaded?.elements?.length) {
+          ui.saveStatus.textContent = "保存データがありません。";
+          return;
+        }
+        state = loaded;
+        state.elements = state.elements.map((e) => ({ ...e, style: normalizeStyle(e.style, e.type) }));
+        selectedId = state.elements[0].id;
+        render();
+        ui.saveStatus.textContent = "保存データを読み込みました。";
+      }
+
+      function extractJson(text) {
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) return null;
+        try { return JSON.parse(match[0]); } catch { return null; }
+      }
+
+      async function callOpenAI({ key, model, prompt }) {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: JSON.stringify({
+            model: model || "gpt-4o-mini",
+            messages: [
+              { role: "system", content: "ノーコードUI設計アシスタント。JSONのみ返す。{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"radius\":10,\"padding\":10,\"fontSize\":16}}]}" },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.7
+          })
+        });
+        if (!response.ok) throw new Error(`OpenAI API error ${response.status}`);
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || "";
+      }
+
+      async function callHF({ key, model, prompt }) {
+        const response = await fetch(`https://api-inference.huggingface.co/models/${model || "Qwen/Qwen2.5-Coder-32B-Instruct"}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: JSON.stringify({
+            inputs: `JSONのみで返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","style":{"bg":"#ffffff","color":"#111827","radius":10,"padding":10,"fontSize":16}}]} 要件:${prompt}`,
+            parameters: { max_new_tokens: 550, temperature: 0.4 }
+          })
+        });
+        if (!response.ok) throw new Error(`HF API error ${response.status}`);
+        const data = await response.json();
+        if (Array.isArray(data)) return data[0]?.generated_text || "";
+        return data.generated_text || JSON.stringify(data);
+      }
+
+      function applyGenerated(parsed) {
+        if (!parsed?.elements?.length) throw new Error("Invalid schema");
+        state.elements = parsed.elements.slice(0, 30).map((e) => {
+          const type = allowedTypes.includes(e.type) ? e.type : "text";
+          return {
+            id: crypto.randomUUID(),
+            type,
+            text: String(e.text || "新しい要素"),
+            style: normalizeStyle(e.style, type)
+          };
+        });
+        selectedId = state.elements[0]?.id || null;
+        render();
+      }
+
+      ui.addButtons.forEach((btn) => { btn.onclick = () => addElement(btn.dataset.add); });
+
+      ui.applyBtn.onclick = () => {
+        const s = selected();
+        if (!s) return;
+        s.text = ui.propText.value || "（空）";
+        s.style.bg = ui.propBg.value;
+        s.style.color = ui.propColor.value;
+        s.style.radius = Number(ui.propRadius.value);
+        s.style.padding = Number(ui.propPadding.value);
+        s.style.fontSize = Number(ui.propFontSize.value);
+        markStatus("変更を反映しました。");
+        render();
+      };
+
+      ui.deleteBtn.onclick = () => {
+        if (!selectedId) return;
+        state.elements = state.elements.filter((e) => e.id !== selectedId);
+        selectedId = state.elements[0]?.id || null;
+        markStatus("要素を削除しました。");
+        render();
+      };
+
+      ui.moveUpBtn.onclick = () => moveSelected(-1);
+      ui.moveDownBtn.onclick = () => moveSelected(1);
+      ui.duplicateBtn.onclick = () => duplicateSelected();
+
+      ui.saveBtn.onclick = () => saveState();
+      ui.loadBtn.onclick = () => loadState();
+      ui.exportBtn.onclick = () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tapapp-layout.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        ui.saveStatus.textContent = "JSONをエクスポートしました。";
+      };
+
+      ui.deployGuideBtn.onclick = () => {
+        alert("Vercelデプロイ手順:\n1. このフォルダをGitHubにpush\n2. vercel.comでNew Project\n3. リポジトリを選択\n4. Preset: Other\n5. Deploy\n\n本番ではAPIキーをクライアントに置かず、Vercel Functions経由にしてください。");
+      };
+
+      ui.generateBtn.onclick = async () => {
+        const key = ui.apiKey.value.trim();
+        const prompt = ui.prompt.value.trim();
+        if (!key || !prompt) {
+          ui.aiStatus.textContent = "APIキーと要件を入力してください。";
+          return;
+        }
+        ui.generateBtn.disabled = true;
+        ui.aiStatus.textContent = "AIで生成中...";
+        try {
+          const provider = ui.provider.value;
+          const model = ui.model.value.trim();
+          const raw = provider === "openai"
+            ? await callOpenAI({ key, model, prompt })
+            : await callHF({ key, model, prompt });
+          const parsed = extractJson(raw);
+          if (!parsed) throw new Error("JSON parse failed");
+          applyGenerated(parsed);
+          ui.aiStatus.textContent = "AI構成を適用しました。中央キャンバスで直感的に調整できます。";
+        } catch (error) {
+          console.error(error);
+          applyGenerated({
+            elements: [
+              { type: "heading", text: "テンプレート", style: { bg: "#fff7ed", color: "#9a3412", radius: 12, padding: 12, fontSize: 22 } },
+              { type: "text", text: prompt, style: { bg: "#ffffff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } },
+              { type: "button", text: "開始", style: { bg: "#3b82f6", color: "#ffffff", radius: 10, padding: 10, fontSize: 16 } }
+            ]
+          });
+          ui.aiStatus.textContent = "AI応答を解析できずテンプレートを作成しました。";
+        } finally {
+          ui.generateBtn.disabled = false;
+        }
+      };
+
+      (function bootstrap() {
+        ui.apiKey.value = localStorage.getItem("tapapp-api-key") || "";
+        ui.provider.value = localStorage.getItem("tapapp-provider") || "openai";
+        ui.model.value = localStorage.getItem("tapapp-model") || "";
+        state.elements = state.elements.map((e) => ({ ...e, style: normalizeStyle(e.style, e.type) }));
+        render();
+      })();
+    </script>
+  </body>
+</html>
