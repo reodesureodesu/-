@@ -29,6 +29,7 @@
       textarea { min-height: 88px; resize: vertical; }
       button { background: #fff; cursor: pointer; }
       button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button.active { background: #0f172a; border-color: #0f172a; color: #fff; }
       button:disabled { opacity:.5; cursor:not-allowed; }
 
       .builder { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 10px; }
@@ -185,6 +186,30 @@
             <button id="backBtn">背面へ</button>
             <button id="previewBtn" class="primary">プレビュー</button>
           </div>
+          <div class="grid2">
+            <select id="placeType">
+              <option value="heading">見出し</option>
+              <option value="text">テキスト</option>
+              <option value="button">ボタン</option>
+              <option value="input">入力欄</option>
+              <option value="card">カード</option>
+            </select>
+            <button id="placeModeBtn">タップ配置モードOFF</button>
+          </div>
+          <div class="grid3">
+            <button id="alignLeftBtn">左揃え</button>
+            <button id="alignCenterBtn">中央揃え</button>
+            <button id="alignRightBtn">右揃え</button>
+          </div>
+          <div class="grid3">
+            <button id="alignTopBtn">上揃え</button>
+            <button id="alignMiddleBtn">中揃え</button>
+            <button id="alignBottomBtn">下揃え</button>
+          </div>
+          <div class="grid2">
+            <button id="distributeHBtn">横均等配置</button>
+            <button id="distributeVBtn">縦均等配置</button>
+          </div>
         </div>
 
         <div class="quick stack zoom-wrap">
@@ -317,6 +342,16 @@
         frontBtn: document.getElementById("frontBtn"),
         backBtn: document.getElementById("backBtn"),
         previewBtn: document.getElementById("previewBtn"),
+        placeType: document.getElementById("placeType"),
+        placeModeBtn: document.getElementById("placeModeBtn"),
+        alignLeftBtn: document.getElementById("alignLeftBtn"),
+        alignCenterBtn: document.getElementById("alignCenterBtn"),
+        alignRightBtn: document.getElementById("alignRightBtn"),
+        alignTopBtn: document.getElementById("alignTopBtn"),
+        alignMiddleBtn: document.getElementById("alignMiddleBtn"),
+        alignBottomBtn: document.getElementById("alignBottomBtn"),
+        distributeHBtn: document.getElementById("distributeHBtn"),
+        distributeVBtn: document.getElementById("distributeVBtn"),
         toggleGridBtn: document.getElementById("toggleGridBtn"),
         toggleSnapBtn: document.getElementById("toggleSnapBtn"),
         zoomRange: document.getElementById("zoomRange"),
@@ -368,12 +403,18 @@
       let selectedId = state.nodes[0]?.id || null;
       let history = [];
       let future = [];
+      let placeMode = false;
 
       const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
       const selected = () => state.nodes.find((n) => n.id === selectedId);
       const status = (msg) => (ui.editStatus.textContent = msg);
       const canSnap = () => state.options.snap;
       const snap = (value, grid = 4) => canSnap() ? Math.round(value / grid) * grid : value;
+
+      function updatePlaceModeUI() {
+        ui.placeModeBtn.classList.toggle("active", placeMode);
+        ui.placeModeBtn.textContent = `タップ配置モード${placeMode ? "ON" : "OFF"}`;
+      }
 
       function snapshot() {
         history.push(JSON.stringify(state));
@@ -629,10 +670,12 @@
         ui.propY.value = n.y;
       }
 
-      function addNode(type) {
+      function addNode(type, x = null, y = null) {
         snapshot();
         const offset = state.nodes.length * 12;
-        const n = newNode(type, clamp(24 + offset, 0, 260), clamp(28 + offset, 0, 600));
+        const nx = x ?? clamp(24 + offset, 0, 260);
+        const ny = y ?? clamp(28 + offset, 0, 600);
+        const n = newNode(type, nx, ny);
         n.z = Date.now();
         state.nodes.push(n);
         selectedId = n.id;
@@ -671,6 +714,43 @@
         snapshot();
         n.z = Math.min(...state.nodes.map((x) => x.z)) - 1;
         status("背面に移動しました。");
+        render();
+      }
+
+      function alignAll(mode) {
+        if (!state.nodes.length) return;
+        snapshot();
+        state.nodes.forEach((n) => {
+          if (mode === "left") n.x = 0;
+          if (mode === "center") n.x = (baseSize.w - n.w) / 2;
+          if (mode === "right") n.x = baseSize.w - n.w;
+          if (mode === "top") n.y = 0;
+          if (mode === "middle") n.y = (baseSize.h - n.h) / 2;
+          if (mode === "bottom") n.y = baseSize.h - n.h;
+          n.x = clamp(snap(n.x), 0, baseSize.w - n.w);
+          n.y = clamp(snap(n.y), 0, baseSize.h - n.h);
+        });
+        status("整列しました。");
+        render();
+      }
+
+      function distribute(axis) {
+        if (state.nodes.length < 3) {
+          status("均等配置は3要素以上で使えます。");
+          return;
+        }
+        snapshot();
+        const nodes = [...state.nodes].sort((a, b) => axis === "x" ? a.x - b.x : a.y - b.y);
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        const start = axis === "x" ? first.x : first.y;
+        const end = axis === "x" ? last.x : last.y;
+        const gap = (end - start) / (nodes.length - 1);
+        nodes.forEach((n, i) => {
+          if (axis === "x") n.x = clamp(snap(start + gap * i), 0, baseSize.w - n.w);
+          else n.y = clamp(snap(start + gap * i), 0, baseSize.h - n.h);
+        });
+        status(axis === "x" ? "横均等配置しました。" : "縦均等配置しました。");
         render();
       }
 
@@ -770,6 +850,17 @@
         render();
       }
 
+      ui.phone.onclick = (e) => {
+        if (!placeMode || e.target !== ui.phone) return;
+        const rect = ui.phone.getBoundingClientRect();
+        const scale = state.options.zoom / 100;
+        const type = ui.placeType.value;
+        const d = defaultsByType[type] || defaultsByType.text;
+        const x = clamp(snap((e.clientX - rect.left) / scale - d.w / 2), 0, baseSize.w - d.w);
+        const y = clamp(snap((e.clientY - rect.top) / scale - d.h / 2), 0, baseSize.h - d.h);
+        addNode(type, x, y);
+      };
+
       ui.addButtons.forEach((btn) => (btn.onclick = () => addNode(btn.dataset.add)));
 
       ui.applyBtn.onclick = () => {
@@ -808,6 +899,19 @@
       ui.dupBtn.onclick = duplicateNode;
       ui.frontBtn.onclick = bringFront;
       ui.backBtn.onclick = sendBack;
+      ui.placeModeBtn.onclick = () => {
+        placeMode = !placeMode;
+        updatePlaceModeUI();
+        status(`タップ配置モード: ${placeMode ? "ON" : "OFF"}`);
+      };
+      ui.alignLeftBtn.onclick = () => alignAll("left");
+      ui.alignCenterBtn.onclick = () => alignAll("center");
+      ui.alignRightBtn.onclick = () => alignAll("right");
+      ui.alignTopBtn.onclick = () => alignAll("top");
+      ui.alignMiddleBtn.onclick = () => alignAll("middle");
+      ui.alignBottomBtn.onclick = () => alignAll("bottom");
+      ui.distributeHBtn.onclick = () => distribute("x");
+      ui.distributeVBtn.onclick = () => distribute("y");
       ui.previewBtn.onclick = () => {
         renderPreviewScreens();
         ui.previewModal.classList.add("open");
@@ -892,6 +996,7 @@
         state.options.showGrid = state.options.showGrid ?? true;
         state.options.snap = state.options.snap ?? true;
         state.options.zoom = clamp(Number(state.options.zoom || 100), 50, 140);
+        updatePlaceModeUI();
         render();
       })();
     </script>
