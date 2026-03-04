@@ -1,1 +1,973 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TapApp Studio</title>
+  <style>
+    :root {
+      --bg: #f4f7ff;
+      --panel: #ffffff;
+      --line: #e5eaf5;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #6f7dff;
+      --soft: #dfe6ff;
+      --chip: #f7f9ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% -10%, #eef2ff, transparent 45%), var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans JP", system-ui, sans-serif;
+    }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 320px 1fr 330px;
+      gap: 12px;
+      padding: 12px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px;
+      overflow: auto;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    }
+    .stack { display: grid; gap: 10px; }
+    .small { font-size: .84rem; color: var(--muted); line-height: 1.5; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    button { cursor: pointer; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .builder { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: linear-gradient(180deg, #fcfdff, #f7f9ff);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .chip {
+      padding: 8px 12px;
+      border: 1px solid #d8def0;
+      border-radius: 999px;
+      background: var(--chip);
+      font-size: .82rem;
+      user-select: none;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .chip:hover { transform: translateY(-1px); border-color: #c6d0ea; }
+
+    .stage-wrap {
+      position: relative;
+      background: linear-gradient(180deg, #f9fbff, #fcfdff);
+      border: 1px dashed #bfd0f2;
+      border-radius: 20px;
+      padding: 12px;
+      min-height: 560px;
+      display: grid;
+      place-items: center;
+      overflow: auto;
+    }
+    .phone {
+      width: 390px;
+      height: 844px;
+      border-radius: 26px;
+      border: 2px solid #ced7ed;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+      transform-origin: top center;
+    }
+    .show-grid {
+      background-image:
+        linear-gradient(to right, rgba(207, 222, 255, .45) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(207, 222, 255, .45) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .node {
+      position: absolute;
+      min-width: 40px;
+      min-height: 32px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      display: grid;
+      align-content: center;
+      user-select: none;
+      cursor: move;
+    }
+    .node.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--soft);
+    }
+    .content { outline: none; width: 100%; height: 100%; }
+    .hint {
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      font-size: .72rem;
+      background: #eff4ff;
+      color: #2550be;
+      border: 1px solid #c9d6ff;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+    .resize {
+      position: absolute;
+      right: -7px;
+      bottom: -7px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #fff;
+      cursor: nwse-resize;
+    }
+
+    .bubble {
+      position: absolute;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 260px;
+      background: rgba(15, 23, 42, 0.80);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 8px;
+      backdrop-filter: blur(4px);
+      z-index: 60;
+    }
+    .bubble .act {
+      padding: 6px 8px;
+      font-size: .75rem;
+      border-radius: 8px;
+      border: 1px solid #4b5d7c;
+      color: #e6ebfb;
+      background: #111b2f;
+      cursor: pointer;
+    }
+
+    .palette { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .sw { width: 20px; height: 20px; border-radius: 6px; border: 1px solid #9aa8c7; cursor: pointer; }
+
+    .preview {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.56);
+      z-index: 80;
+      padding: 16px;
+    }
+    .preview.open { display: grid; }
+    .preview-panel {
+      width: min(1180px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .preview-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .close-x { padding: 2px 9px; border-radius: 8px; background: #f2f5fb; cursor: pointer; }
+    .screens { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .device { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #f8faff; }
+    .screen { position: relative; border: 1px solid #ced7ed; background: #fff; overflow: hidden; }
+    .mobile { aspect-ratio: 9 / 19.5; border-radius: 18px; }
+    .tablet { aspect-ratio: 4 / 3; border-radius: 12px; }
+    .desktop { aspect-ratio: 16 / 10; border-radius: 10px; }
+
+    .status { min-height: 1.2em; font-size: .84rem; color: var(--muted); }
+    @media (max-width: 1200px) { .app { grid-template-columns: 1fr; } .screens { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main class="app">
+  <section class="panel stack">
+    <h1>TapApp Studio</h1>
+    <p class="small">Lovable風の柔らかいUI + タップ中心操作。AI生成の失敗率を下げるため再試行とJSON修復を追加。</p>
+
+    <div class="stack">
+      <h2>1) AIで下書き</h2>
+      <label class="small">Provider</label>
+      <select id="provider">
+        <option value="openai">OpenAI API</option>
+        <option value="hf">Hugging Face Inference API</option>
+        <option value="lovable">Lovable AI（OpenAI互換）</option>
+      </select>
+
+      <div id="lovableRow" class="stack" style="display:none;">
+        <label class="small">Lovable Base URL（OpenAI互換）</label>
+        <input id="lovableBaseUrl" placeholder="例: https://your-lovable-endpoint/v1" />
+      </div>
+
+      <label class="small">API Key</label>
+      <input id="apiKey" type="password" placeholder="sk-... / hf_... / lovable token" />
+
+      <label class="small">モデル（主要プリセット）</label>
+      <select id="modelPreset"></select>
+      <label class="small">カスタムモデル（任意）</label>
+      <input id="modelCustom" placeholder="空欄なら上のプリセットを使用" />
+
+      <label class="small">要件</label>
+      <textarea id="prompt" placeholder="例: 予約アプリ。上に見出し、中央に説明、下に開始風の要素"></textarea>
+
+      <button id="generateBtn" class="primary">AIで初期レイアウト生成</button>
+      <div id="aiStatus" class="status"></div>
+    </div>
+  </section>
+
+  <section class="panel builder">
+    <div id="addRow" class="chip-row">
+      <div class="chip" data-add="heading">見出し</div>
+      <div class="chip" data-add="text">テキスト</div>
+      <div class="chip" data-add="button">ボタン風</div>
+      <div class="chip" data-add="input">入力欄</div>
+      <div class="chip" data-add="card">カード</div>
+    </div>
+
+    <div id="toolRow" class="chip-row">
+      <div class="chip" data-tool="undo">Undo</div>
+      <div class="chip" data-tool="redo">Redo</div>
+      <div class="chip" data-tool="grid">Grid</div>
+      <div class="chip" data-tool="snap">Snap</div>
+      <div class="chip" data-tool="preview">Preview</div>
+      <div class="chip">Zoom</div>
+      <input id="zoom" type="range" min="50" max="140" value="100" style="width:180px" />
+      <span class="small" id="zoomLabel">100%</span>
+    </div>
+
+    <div class="stage-wrap">
+      <div id="phone" class="phone show-grid"></div>
+      <div id="bubble" class="bubble" hidden></div>
+    </div>
+
+    <div id="saveStatus" class="status"></div>
+  </section>
+
+  <section class="panel stack">
+    <h2>3) 選択中の詳細編集</h2>
+    <p class="small">値はライブ反映。色は常時パレット表示。</p>
+
+    <label class="small">テキスト</label>
+    <input id="propText" />
+
+    <div class="grid2">
+      <div>
+        <label class="small">背景色</label>
+        <input id="propBg" type="color" value="#ffffff" />
+        <div class="palette" data-target="propBg">
+          <div class="sw" data-color="#ffffff" style="background:#ffffff"></div>
+          <div class="sw" data-color="#f8fafc" style="background:#f8fafc"></div>
+          <div class="sw" data-color="#fff7ed" style="background:#fff7ed"></div>
+          <div class="sw" data-color="#dcfce7" style="background:#dcfce7"></div>
+          <div class="sw" data-color="#dbeafe" style="background:#dbeafe"></div>
+          <div class="sw" data-color="#111827" style="background:#111827"></div>
+        </div>
+      </div>
+      <div>
+        <label class="small">文字色</label>
+        <input id="propColor" type="color" value="#111827" />
+        <div class="palette" data-target="propColor">
+          <div class="sw" data-color="#111827" style="background:#111827"></div>
+          <div class="sw" data-color="#334155" style="background:#334155"></div>
+          <div class="sw" data-color="#ffffff" style="background:#ffffff"></div>
+          <div class="sw" data-color="#2563eb" style="background:#2563eb"></div>
+          <div class="sw" data-color="#9a3412" style="background:#9a3412"></div>
+          <div class="sw" data-color="#16a34a" style="background:#16a34a"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label class="small">枠線色</label>
+        <input id="propBorderColor" type="color" value="#2563eb" />
+        <div class="palette" data-target="propBorderColor">
+          <div class="sw" data-color="#2563eb" style="background:#2563eb"></div>
+          <div class="sw" data-color="#1d4ed8" style="background:#1d4ed8"></div>
+          <div class="sw" data-color="#475569" style="background:#475569"></div>
+          <div class="sw" data-color="#0f172a" style="background:#0f172a"></div>
+          <div class="sw" data-color="#ef4444" style="background:#ef4444"></div>
+          <div class="sw" data-color="#22c55e" style="background:#22c55e"></div>
+        </div>
+      </div>
+      <div>
+        <label class="small">枠線太さ</label>
+        <input id="propBorderWidth" type="range" min="0" max="8" value="0" />
+      </div>
+    </div>
+
+    <label class="small">角丸</label><input id="propRadius" type="range" min="0" max="40" value="10" />
+    <label class="small">余白</label><input id="propPadding" type="range" min="4" max="36" value="10" />
+    <label class="small">文字サイズ</label><input id="propFont" type="range" min="12" max="36" value="16" />
+    <label class="small">透明度(%)</label><input id="propOpacity" type="range" min="20" max="100" value="100" />
+    <label class="small">回転(deg)</label><input id="propRotate" type="range" min="-30" max="30" value="0" />
+
+    <div class="grid2">
+      <div><label class="small">幅</label><input id="propW" type="number" min="40" /></div>
+      <div><label class="small">高さ</label><input id="propH" type="number" min="32" /></div>
+    </div>
+    <div class="grid2">
+      <div><label class="small">X</label><input id="propX" type="number" min="0" /></div>
+      <div><label class="small">Y</label><input id="propY" type="number" min="0" /></div>
+    </div>
+
+    <div id="editStatus" class="status"></div>
+  </section>
+</main>
+
+<section id="preview" class="preview">
+  <div class="preview-panel">
+    <div class="preview-head">
+      <h2>ライブプレビュー</h2>
+      <div id="closePreview" class="close-x">✕</div>
+    </div>
+    <div class="screens">
+      <div class="device"><h3>Mobile</h3><div id="pvMobile" class="screen mobile"></div></div>
+      <div class="device"><h3>Tablet</h3><div id="pvTablet" class="screen tablet"></div></div>
+      <div class="device"><h3>Desktop</h3><div id="pvDesktop" class="screen desktop"></div></div>
+    </div>
+  </div>
+</section>
+
+<script>
+const base = { w: 390, h: 844 };
+const types = ["heading", "text", "button", "input", "card"];
+const defaults = {
+  heading: { text: "見出し", w: 260, h: 58, fontSize: 24 },
+  text: { text: "テキスト", w: 260, h: 50, fontSize: 16 },
+  button: { text: "開始", w: 180, h: 48, fontSize: 16, bg: "#2563eb", color: "#fff" },
+  input: { text: "入力してください", w: 250, h: 46, fontSize: 15, bg: "#f8fafc" },
+  card: { text: "カード", w: 280, h: 120, fontSize: 16, bg: "#fff" }
+};
+
+const modelPresets = {
+  openai: ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1", "o4-mini"],
+  hf: ["Qwen/Qwen2.5-Coder-32B-Instruct", "meta-llama/Llama-3.1-8B-Instruct", "mistralai/Mistral-7B-Instruct-v0.3", "google/gemma-2-9b-it"],
+  lovable: ["gpt-4o-mini", "gpt-4.1-mini", "claude-3-5-sonnet", "gemini-1.5-pro"]
+};
+
+const $ = (id) => document.getElementById(id);
+const ui = {
+  phone: $("phone"), bubble: $("bubble"), addRow: $("addRow"), toolRow: $("toolRow"),
+  zoom: $("zoom"), zoomLabel: $("zoomLabel"), preview: $("preview"), closePreview: $("closePreview"),
+  pvMobile: $("pvMobile"), pvTablet: $("pvTablet"), pvDesktop: $("pvDesktop"),
+  provider: $("provider"), lovableRow: $("lovableRow"), lovableBaseUrl: $("lovableBaseUrl"),
+  apiKey: $("apiKey"), modelPreset: $("modelPreset"), modelCustom: $("modelCustom"), prompt: $("prompt"),
+  generateBtn: $("generateBtn"), aiStatus: $("aiStatus"), saveStatus: $("saveStatus"), editStatus: $("editStatus"),
+  propText: $("propText"), propBg: $("propBg"), propColor: $("propColor"), propBorderColor: $("propBorderColor"),
+  propBorderWidth: $("propBorderWidth"), propRadius: $("propRadius"), propPadding: $("propPadding"),
+  propFont: $("propFont"), propOpacity: $("propOpacity"), propRotate: $("propRotate"),
+  propW: $("propW"), propH: $("propH"), propX: $("propX"), propY: $("propY")
+};
+
+function refreshProviderUI() {
+  ui.lovableRow.style.display = ui.provider.value === "lovable" ? "grid" : "none";
+}
+function refreshModelPreset() {
+  const list = modelPresets[ui.provider.value] || [];
+  const prev = ui.modelPreset.value;
+  ui.modelPreset.innerHTML = "";
+  list.forEach((m) => {
+    const o = document.createElement("option");
+    o.value = m;
+    o.textContent = m;
+    ui.modelPreset.appendChild(o);
+  });
+  if (list.includes(prev)) ui.modelPreset.value = prev;
+}
+function resolvedModel() {
+  return ui.modelCustom.value.trim() || ui.modelPreset.value.trim();
+}
+
+function makeNode(type, x = 30, y = 30) {
+  const d = defaults[type] || defaults.text;
+  return {
+    id: crypto.randomUUID(), type, text: d.text, x, y, w: d.w, h: d.h, z: Date.now(),
+    style: { bg: d.bg || "#fff", color: d.color || "#111827", borderColor: "#2563eb", borderWidth: 0, radius: 10, padding: 10, fontSize: d.fontSize || 16, opacity: 100, rotate: 0 }
+  };
+}
+
+let state = JSON.parse(localStorage.getItem("tapapp-state") || "null") || {
+  options: { grid: true, snap: true, zoom: 100 },
+  nodes: [makeNode("heading", 24, 32), makeNode("text", 24, 102), makeNode("button", 24, 170)]
+};
+state.options = state.options || { grid: true, snap: true, zoom: 100 };
+let selectedId = state.nodes[0]?.id || null;
+let history = [];
+let future = [];
+let suppressInline = false;
+
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+const snap = (v) => state.options.snap ? Math.round(v / 4) * 4 : v;
+const sel = () => state.nodes.find((n) => n.id === selectedId);
+const msg = (t) => ui.editStatus.textContent = t;
+
+function snapshot() { history.push(JSON.stringify(state)); if (history.length > 80) history.shift(); future = []; }
+function undo() { if (!history.length) return; future.push(JSON.stringify(state)); state = JSON.parse(history.pop()); selectedId = state.nodes[0]?.id || null; render(); }
+function redo() { if (!future.length) return; history.push(JSON.stringify(state)); state = JSON.parse(future.pop()); selectedId = state.nodes[0]?.id || null; render(); }
+
+function norm(n) {
+  n.type = types.includes(n.type) ? n.type : "text";
+  n.text = String(n.text ?? "");
+  n.w = clamp(+n.w || 120, 40, base.w);
+  n.h = clamp(+n.h || 40, 32, base.h);
+  n.x = clamp(+n.x || 0, 0, base.w - n.w);
+  n.y = clamp(+n.y || 0, 0, base.h - n.h);
+  n.z = +n.z || Date.now();
+  n.style = n.style || {};
+  n.style.bg = n.style.bg || "#fff";
+  n.style.color = n.style.color || "#111827";
+  n.style.borderColor = n.style.borderColor || "#2563eb";
+  n.style.borderWidth = clamp(+n.style.borderWidth || 0, 0, 8);
+  n.style.radius = clamp(+n.style.radius || 10, 0, 40);
+  n.style.padding = clamp(+n.style.padding || 10, 4, 36);
+  n.style.fontSize = clamp(+n.style.fontSize || 16, 12, 36);
+  n.style.opacity = clamp(+n.style.opacity || 100, 20, 100);
+  n.style.rotate = clamp(+n.style.rotate || 0, -30, 30);
+  return n;
+}
+
+function styleNode(el, n, preview = false) {
+  el.style.left = `${n.x}px`;
+  el.style.top = `${n.y}px`;
+  el.style.width = `${n.w}px`;
+  el.style.height = `${n.h}px`;
+  el.style.background = n.style.bg;
+  el.style.color = n.style.color;
+  el.style.border = `${n.style.borderWidth}px solid ${n.style.borderColor}`;
+  el.style.borderRadius = `${n.style.radius}px`;
+  el.style.padding = `${n.style.padding}px`;
+  el.style.fontSize = `${n.style.fontSize}px`;
+  el.style.opacity = n.style.opacity / 100;
+  el.style.transform = `rotate(${n.style.rotate}deg)`;
+  el.style.zIndex = n.z;
+  if (preview) el.style.pointerEvents = "none";
+}
+function content(node) {
+  const c = document.createElement("div");
+  c.className = "content";
+  c.textContent = node.text;
+  return c;
+}
+
+const acts = [["複製","dup"],["削除","del"],["前面","front"],["背面","back"],["左","left"],["中X","cx"],["右","right"],["上","top"],["中Y","cy"],["下","bottom"],["横均等","dx"],["縦均等","dy"]];
+function setupBubble() {
+  ui.bubble.innerHTML = "";
+  acts.forEach(([label, action]) => {
+    const d = document.createElement("div");
+    d.className = "act";
+    d.textContent = label;
+    d.onclick = () => runAct(action);
+    ui.bubble.appendChild(d);
+  });
+}
+function runAct(a) {
+  if (!sel()) return;
+  if (a === "dup") return dup();
+  if (a === "del") return del();
+  if (a === "front") return zFront();
+  if (a === "back") return zBack();
+  if (a === "left") return align("left");
+  if (a === "cx") return align("center");
+  if (a === "right") return align("right");
+  if (a === "top") return align("top");
+  if (a === "cy") return align("middle");
+  if (a === "bottom") return align("bottom");
+  if (a === "dx") return dist("x");
+  if (a === "dy") return dist("y");
+}
+function showBubble(id) {
+  const el = ui.phone.querySelector(`.node[data-id="${id}"]`);
+  if (!el) { ui.bubble.hidden = true; return; }
+  ui.bubble.hidden = false;
+  const r = el.getBoundingClientRect();
+  const p = ui.phone.getBoundingClientRect();
+  const bw = ui.bubble.offsetWidth || 220;
+  const bh = ui.bubble.offsetHeight || 74;
+  const nx = r.left - p.left;
+  const ny = r.top - p.top;
+
+  let x = Math.max(6, Math.min(nx + r.width / 2 - bw / 2, p.width - bw - 6));
+  let y = ny - bh - 10;
+  if (y < 6) y = ny + r.height + 10;
+
+  const overlapX = !(x + bw < nx || x > nx + r.width);
+  const overlapY = !(y + bh < ny || y > ny + r.height);
+  if (overlapX && overlapY) {
+    x = Math.min(p.width - bw - 6, nx + r.width + 10);
+    if (x < 6) x = 6;
+  }
+
+  ui.bubble.style.left = `${x}px`;
+  ui.bubble.style.top = `${y}px`;
+}
+
+function render() {
+  state.nodes = (state.nodes || []).map(norm).sort((a, b) => a.z - b.z);
+  ui.phone.innerHTML = "";
+  ui.phone.classList.toggle("show-grid", !!state.options.grid);
+  ui.phone.style.transform = `scale(${state.options.zoom / 100})`;
+  ui.zoom.value = String(state.options.zoom);
+  ui.zoomLabel.textContent = `${state.options.zoom}%`;
+
+  state.nodes.forEach((n) => {
+    const box = document.createElement("div");
+    box.className = `node ${n.id === selectedId ? "selected" : ""}`;
+    box.dataset.id = n.id;
+    styleNode(box, n);
+
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = n.type;
+    box.appendChild(hint);
+
+    const c = content(n);
+    box.appendChild(c);
+
+    const rs = document.createElement("span");
+    rs.className = "resize";
+    box.appendChild(rs);
+
+    box.addEventListener("pointerdown", (e) => dragStart(e, n.id));
+    rs.addEventListener("pointerdown", (e) => resizeStart(e, n.id));
+    box.addEventListener("click", () => {
+      selectedId = n.id;
+      syncProps();
+      render();
+      if (suppressInline) { suppressInline = false; return; }
+      inlineEdit(n.id, c);
+    });
+
+    ui.phone.appendChild(box);
+  });
+
+  syncProps();
+  if (selectedId) showBubble(selectedId); else ui.bubble.hidden = true;
+  renderPreview();
+}
+
+function inlineEdit(id, c) {
+  const n = state.nodes.find((x) => x.id === id);
+  if (!n || n.type === "input") return;
+  snapshot();
+  c.contentEditable = "true";
+  c.focus();
+  msg("直接編集: Enterで確定");
+  const done = () => {
+    c.contentEditable = "false";
+    n.text = (c.textContent || "").trim();
+    ui.propText.value = n.text;
+    render();
+  };
+  c.onblur = done;
+  c.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      c.blur();
+    }
+  };
+}
+
+function dragStart(e, id) {
+  if (e.target.classList.contains("resize")) return;
+  const n = state.nodes.find((x) => x.id === id);
+  if (!n) return;
+  snapshot();
+  selectedId = id;
+  const z = state.options.zoom / 100;
+  const sx = e.clientX;
+  const sy = e.clientY;
+  const ox = n.x;
+  const oy = n.y;
+
+  const mv = (ev) => {
+    n.x = clamp(snap(ox + (ev.clientX - sx) / z), 0, base.w - n.w);
+    n.y = clamp(snap(oy + (ev.clientY - sy) / z), 0, base.h - n.h);
+    render();
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", mv);
+    window.removeEventListener("pointerup", up);
+    if (Math.abs(n.x - ox) > 1 || Math.abs(n.y - oy) > 1) suppressInline = true;
+  };
+
+  window.addEventListener("pointermove", mv);
+  window.addEventListener("pointerup", up);
+}
+
+function resizeStart(e, id) {
+  e.stopPropagation();
+  const n = state.nodes.find((x) => x.id === id);
+  if (!n) return;
+  snapshot();
+  selectedId = id;
+  const z = state.options.zoom / 100;
+  const sx = e.clientX;
+  const sy = e.clientY;
+  const ow = n.w;
+  const oh = n.h;
+
+  const mv = (ev) => {
+    n.w = clamp(snap(ow + (ev.clientX - sx) / z), 40, base.w - n.x);
+    n.h = clamp(snap(oh + (ev.clientY - sy) / z), 32, base.h - n.y);
+    render();
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", mv);
+    window.removeEventListener("pointerup", up);
+  };
+
+  window.addEventListener("pointermove", mv);
+  window.addEventListener("pointerup", up);
+}
+
+function syncProps() {
+  const n = sel();
+  const d = !n;
+  [ui.propText, ui.propBg, ui.propColor, ui.propBorderColor, ui.propBorderWidth, ui.propRadius, ui.propPadding, ui.propFont, ui.propOpacity, ui.propRotate, ui.propW, ui.propH, ui.propX, ui.propY].forEach((x) => x.disabled = d);
+  if (!n) return;
+  ui.propText.value = n.text;
+  ui.propBg.value = n.style.bg;
+  ui.propColor.value = n.style.color;
+  ui.propBorderColor.value = n.style.borderColor;
+  ui.propBorderWidth.value = n.style.borderWidth;
+  ui.propRadius.value = n.style.radius;
+  ui.propPadding.value = n.style.padding;
+  ui.propFont.value = n.style.fontSize;
+  ui.propOpacity.value = n.style.opacity;
+  ui.propRotate.value = n.style.rotate;
+  ui.propW.value = n.w;
+  ui.propH.value = n.h;
+  ui.propX.value = n.x;
+  ui.propY.value = n.y;
+}
+function applyLive() {
+  const n = sel();
+  if (!n) return;
+  n.text = ui.propText.value;
+  n.style.bg = ui.propBg.value;
+  n.style.color = ui.propColor.value;
+  n.style.borderColor = ui.propBorderColor.value;
+  n.style.borderWidth = +ui.propBorderWidth.value;
+  n.style.radius = +ui.propRadius.value;
+  n.style.padding = +ui.propPadding.value;
+  n.style.fontSize = +ui.propFont.value;
+  n.style.opacity = +ui.propOpacity.value;
+  n.style.rotate = +ui.propRotate.value;
+  n.w = clamp(+ui.propW.value, 40, base.w - n.x);
+  n.h = clamp(+ui.propH.value, 32, base.h - n.y);
+  n.x = clamp(+ui.propX.value, 0, base.w - n.w);
+  n.y = clamp(+ui.propY.value, 0, base.h - n.h);
+  render();
+}
+
+function add(type) {
+  snapshot();
+  const off = state.nodes.length * 12;
+  const n = makeNode(type, clamp(24 + off, 0, 260), clamp(28 + off, 0, 600));
+  n.z = Date.now();
+  state.nodes.push(n);
+  selectedId = n.id;
+  render();
+}
+function dup() {
+  const n = sel();
+  if (!n) return;
+  snapshot();
+  const c = JSON.parse(JSON.stringify(n));
+  c.id = crypto.randomUUID();
+  c.x = clamp(n.x + 16, 0, base.w - n.w);
+  c.y = clamp(n.y + 16, 0, base.h - n.h);
+  c.z = Math.max(...state.nodes.map((x) => x.z)) + 1;
+  c.text = `${n.text} コピー`;
+  state.nodes.push(c);
+  selectedId = c.id;
+  render();
+}
+function del() {
+  if (!selectedId) return;
+  snapshot();
+  state.nodes = state.nodes.filter((n) => n.id !== selectedId);
+  selectedId = state.nodes[0]?.id || null;
+  render();
+}
+function zFront() { const n = sel(); if (!n) return; snapshot(); n.z = Math.max(...state.nodes.map((x) => x.z)) + 1; render(); }
+function zBack() { const n = sel(); if (!n) return; snapshot(); n.z = Math.min(...state.nodes.map((x) => x.z)) - 1; render(); }
+function align(m) {
+  if (!state.nodes.length) return;
+  snapshot();
+  state.nodes.forEach((n) => {
+    if (m === "left") n.x = 0;
+    if (m === "center") n.x = (base.w - n.w) / 2;
+    if (m === "right") n.x = base.w - n.w;
+    if (m === "top") n.y = 0;
+    if (m === "middle") n.y = (base.h - n.h) / 2;
+    if (m === "bottom") n.y = base.h - n.h;
+    n.x = clamp(snap(n.x), 0, base.w - n.w);
+    n.y = clamp(snap(n.y), 0, base.h - n.h);
+  });
+  render();
+}
+function dist(ax) {
+  if (state.nodes.length < 3) return;
+  snapshot();
+  const ns = [...state.nodes].sort((a, b) => ax === "x" ? a.x - b.x : a.y - b.y);
+  const s = ax === "x" ? ns[0].x : ns[0].y;
+  const e = ax === "x" ? ns.at(-1).x : ns.at(-1).y;
+  const g = (e - s) / (ns.length - 1);
+  ns.forEach((n, i) => {
+    if (ax === "x") n.x = clamp(snap(s + g * i), 0, base.w - n.w);
+    else n.y = clamp(snap(s + g * i), 0, base.h - n.h);
+  });
+  render();
+}
+
+function renderPreview() {
+  const maps = [[ui.pvMobile, 390, 844], [ui.pvTablet, 834, 1112], [ui.pvDesktop, 1440, 900]];
+  maps.forEach(([el, w, h]) => {
+    el.innerHTML = "";
+    const sx = w / base.w;
+    const sy = h / base.h;
+    state.nodes.forEach((n) => {
+      const x = norm(JSON.parse(JSON.stringify(n)));
+      x.x *= sx; x.y *= sy; x.w *= sx; x.h *= sy;
+      x.style.fontSize = clamp(x.style.fontSize * Math.min(sx, sy), 10, 60);
+      x.style.padding = clamp(x.style.padding * Math.min(sx, sy), 2, 50);
+      const p = document.createElement("div");
+      p.style.position = "absolute";
+      styleNode(p, x, true);
+      const c = content(x);
+      c.style.pointerEvents = "none";
+      p.appendChild(c);
+      el.appendChild(p);
+    });
+  });
+}
+
+function tryParseJson(raw) {
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch {}
+  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) {
+    try { return JSON.parse(fence[1]); } catch {}
+  }
+  const obj = raw.match(/\{[\s\S]*\}/);
+  if (obj) {
+    try { return JSON.parse(obj[0]); } catch {}
+  }
+  return null;
+}
+
+function normalizeAIResponse(parsed) {
+  if (parsed?.elements?.length) return parsed;
+  if (Array.isArray(parsed?.screens) && parsed.screens[0]?.elements) return { elements: parsed.screens[0].elements };
+  if (Array.isArray(parsed?.ui)) return { elements: parsed.ui };
+  return null;
+}
+
+async function callOpenAICompat(baseUrl, { key, model, prompt }) {
+  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: "あなたはノーコードUI設計AI。必ずJSONのみを返答。形式:{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"x\":20,\"y\":20,\"w\":220,\"h\":48,\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"radius\":10,\"padding\":10,\"fontSize\":16}}]}"
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.5,
+      response_format: { type: "json_object" }
+    })
+  });
+  if (!res.ok) throw new Error(`OpenAI-compatible API error ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+async function callHF({ key, model, prompt }) {
+  const res = await fetch(`https://api-inference.huggingface.co/models/${model || "Qwen/Qwen2.5-Coder-32B-Instruct"}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      inputs: `JSONのみ返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","x":20,"y":20,"w":220,"h":48,"style":{"bg":"#ffffff","color":"#111827","radius":10,"padding":10,"fontSize":16}}]} 要件:${prompt}`,
+      parameters: { max_new_tokens: 900, temperature: 0.3, return_full_text: False }
+    })
+  });
+  if (!res.ok) throw new Error(`HF API error ${res.status}`);
+  const data = await res.json();
+  if (Array.isArray(data)) return data[0]?.generated_text || "";
+  return data.generated_text || JSON.stringify(data);
+}
+
+async function generateLayoutWithRetry({ provider, key, model, prompt, lovableBaseUrl }) {
+  const attempts = [0, 1];
+  let lastErr;
+  for (const idx of attempts) {
+    try {
+      const raw = provider === "hf"
+        ? await callHF({ key, model, prompt: idx === 0 ? prompt : `${prompt}\n\n※JSONのみで返してください。` })
+        : await callOpenAICompat(provider === "lovable" ? lovableBaseUrl : "https://api.openai.com/v1", {
+            key,
+            model,
+            prompt: idx === 0 ? prompt : `${prompt}\n\n必ずJSONのみで返答。`
+          });
+
+      const parsed = normalizeAIResponse(tryParseJson(raw));
+      if (parsed?.elements?.length) return parsed;
+      throw new Error("JSON parse failed");
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("AI generation failed");
+}
+
+function applyGenerated(parsed) {
+  if (!parsed?.elements?.length) throw new Error("Invalid schema");
+  snapshot();
+  state.nodes = parsed.elements.slice(0, 30).map((e, i) => norm({
+    id: crypto.randomUUID(),
+    type: types.includes(e.type) ? e.type : "text",
+    text: e.text || "要素",
+    x: e.x ?? 24,
+    y: e.y ?? (28 + i * 54),
+    w: e.w ?? 220,
+    h: e.h ?? 48,
+    z: Date.now() + i,
+    style: e.style || {}
+  }));
+  selectedId = state.nodes[0]?.id || null;
+  render();
+}
+
+ui.addRow.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-add]");
+  if (!t) return;
+  add(t.dataset.add);
+});
+ui.toolRow.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-tool]");
+  if (!t) return;
+  const a = t.dataset.tool;
+  if (a === "undo") undo();
+  if (a === "redo") redo();
+  if (a === "grid") { state.options.grid = !state.options.grid; render(); }
+  if (a === "snap") { state.options.snap = !state.options.snap; render(); }
+  if (a === "preview") ui.preview.classList.add("open");
+});
+ui.closePreview.onclick = () => ui.preview.classList.remove("open");
+ui.preview.onclick = (e) => { if (e.target === ui.preview) ui.preview.classList.remove("open"); };
+ui.zoom.oninput = () => { state.options.zoom = +ui.zoom.value; render(); };
+ui.provider.onchange = () => { refreshProviderUI(); refreshModelPreset(); };
+
+[ui.propText, ui.propBg, ui.propColor, ui.propBorderColor, ui.propBorderWidth, ui.propRadius, ui.propPadding, ui.propFont, ui.propOpacity, ui.propRotate, ui.propW, ui.propH, ui.propX, ui.propY].forEach((i) => i.addEventListener("input", applyLive));
+
+document.querySelectorAll(".palette").forEach((pal) => {
+  pal.addEventListener("click", (e) => {
+    const sw = e.target.closest(".sw");
+    if (!sw) return;
+    const input = document.getElementById(pal.dataset.target);
+    if (!input) return;
+    input.value = sw.dataset.color;
+    applyLive();
+  });
+});
+
+ui.generateBtn.onclick = async () => {
+  const key = ui.apiKey.value.trim();
+  const prompt = ui.prompt.value.trim();
+  const model = resolvedModel();
+  const provider = ui.provider.value;
+  const lovableBaseUrl = (ui.lovableBaseUrl.value.trim() || "https://api.openai.com/v1");
+
+  localStorage.setItem("tapapp-api-key", key);
+  localStorage.setItem("tapapp-provider", provider);
+  localStorage.setItem("tapapp-model-preset", ui.modelPreset.value);
+  localStorage.setItem("tapapp-model-custom", ui.modelCustom.value.trim());
+  localStorage.setItem("tapapp-lovable-base-url", ui.lovableBaseUrl.value.trim());
+
+  if (!key || !prompt) {
+    ui.aiStatus.textContent = "APIキーと要件を入力してください。";
+    return;
+  }
+
+  ui.generateBtn.disabled = true;
+  ui.aiStatus.textContent = "AIで生成中...";
+  try {
+    const parsed = await generateLayoutWithRetry({ provider, key, model, prompt, lovableBaseUrl });
+    applyGenerated(parsed);
+    ui.aiStatus.textContent = "AIレイアウトを反映しました。";
+  } catch (err) {
+    console.error(err);
+    applyGenerated({ elements: [
+      { type: "heading", text: "テンプレート", x: 24, y: 28, w: 250, h: 56, style: { bg: "#fff7ed", color: "#9a3412", radius: 12, padding: 10, fontSize: 22 } },
+      { type: "text", text: prompt, x: 24, y: 96, w: 320, h: 120, style: { bg: "#fff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } },
+      { type: "button", text: "開始", x: 24, y: 230, w: 150, h: 48, style: { bg: "#2563eb", color: "#fff", radius: 10, padding: 10, fontSize: 16 } }
+    ]});
+    ui.aiStatus.textContent = "AI生成に失敗したためテンプレートを表示しました。";
+  } finally {
+    ui.generateBtn.disabled = false;
+  }
+};
+
+window.addEventListener("keydown", (e) => {
+  const n = sel();
+  if (!n) return;
+  const ks = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+  if (!ks.includes(e.key)) return;
+  const tag = document.activeElement?.tagName?.toLowerCase();
+  if (["input", "textarea", "select"].includes(tag)) return;
+  e.preventDefault();
+  snapshot();
+  const st = e.shiftKey ? 10 : 2;
+  if (e.key === "ArrowLeft") n.x = clamp(n.x - st, 0, base.w - n.w);
+  if (e.key === "ArrowRight") n.x = clamp(n.x + st, 0, base.w - n.w);
+  if (e.key === "ArrowUp") n.y = clamp(n.y - st, 0, base.h - n.h);
+  if (e.key === "ArrowDown") n.y = clamp(n.y + st, 0, base.h - n.h);
+  render();
+});
+
+(function boot() {
+  ui.apiKey.value = localStorage.getItem("tapapp-api-key") || "";
+  ui.provider.value = localStorage.getItem("tapapp-provider") || "openai";
+  ui.lovableBaseUrl.value = localStorage.getItem("tapapp-lovable-base-url") || "";
+  refreshProviderUI();
+  refreshModelPreset();
+  ui.modelCustom.value = localStorage.getItem("tapapp-model-custom") || "";
+  const savedPreset = localStorage.getItem("tapapp-model-preset") || "";
+  if (savedPreset) ui.modelPreset.value = savedPreset;
+
+  state.nodes = (state.nodes || []).map(norm);
+  if (!state.nodes.length) state.nodes = [makeNode("heading")];
+  selectedId = state.nodes[0].id;
+  state.options.zoom = clamp(+state.options.zoom || 100, 50, 140);
+  setupBubble();
+  render();
+})();
+</script>
+</body>
+</html>
