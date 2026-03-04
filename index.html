@@ -27,7 +27,7 @@
     .resize{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #fff;cursor:nwse-resize}
     .hint{position:absolute;top:8px;left:8px;font-size:.72rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px}
 
-    .bubble{position:absolute;display:flex;flex-wrap:wrap;gap:6px;max-width:250px;background:rgba(15,23,42,.95);border:1px solid #334155;padding:8px;border-radius:12px;z-index:40}
+    .bubble{position:absolute;display:flex;flex-wrap:wrap;gap:6px;max-width:250px;background:rgba(15,23,42,.82);border:1px solid #334155;padding:8px;border-radius:12px;z-index:40;backdrop-filter:blur(2px)}
     .bubble .act{padding:6px 8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:.75rem;cursor:pointer}
 
     .preview{position:fixed;inset:0;display:none;place-items:center;background:rgba(15,23,42,.58);z-index:60;padding:16px}
@@ -38,6 +38,9 @@
     .screen{position:relative;background:#fff;border:1px solid #c7d5e6;overflow:hidden} .mobile{aspect-ratio:9/19.5;border-radius:18px}
     .tablet{aspect-ratio:4/3;border-radius:12px} .desktop{aspect-ratio:16/10;border-radius:10px}
     .status{min-height:1.2em;font-size:.84rem;color:var(--muted)}
+    .palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .sw{width:20px;height:20px;border-radius:6px;border:1px solid #94a3b8;cursor:pointer}
+
     @media (max-width:1200px){.app{grid-template-columns:1fr}.screens{grid-template-columns:1fr}}
   </style>
 </head>
@@ -75,8 +78,8 @@
     <h2>3) 選択中の詳細編集</h2>
     <p class="small">値を動かすと即反映（適用ボタンなし）。</p>
     <label class="small">テキスト</label><input id="propText" />
-    <div class="grid2"><div><label class="small">背景色</label><input id="propBg" type="color" value="#ffffff" /></div><div><label class="small">文字色</label><input id="propColor" type="color" value="#111827" /></div></div>
-    <div class="grid2"><div><label class="small">枠線色</label><input id="propBorderColor" type="color" value="#2563eb" /></div><div><label class="small">枠線太さ</label><input id="propBorderWidth" type="range" min="0" max="8" value="0" /></div></div>
+    <div class="grid2"><div><label class="small">背景色</label><input id="propBg" type="color" value="#ffffff" /><div class="palette" data-target="propBg"><div class="sw" data-color="#ffffff" style="background:#ffffff"></div><div class="sw" data-color="#f8fafc" style="background:#f8fafc"></div><div class="sw" data-color="#fff7ed" style="background:#fff7ed"></div><div class="sw" data-color="#dcfce7" style="background:#dcfce7"></div><div class="sw" data-color="#dbeafe" style="background:#dbeafe"></div><div class="sw" data-color="#111827" style="background:#111827"></div></div></div><div><label class="small">文字色</label><input id="propColor" type="color" value="#111827" /><div class="palette" data-target="propColor"><div class="sw" data-color="#111827" style="background:#111827"></div><div class="sw" data-color="#334155" style="background:#334155"></div><div class="sw" data-color="#ffffff" style="background:#ffffff"></div><div class="sw" data-color="#2563eb" style="background:#2563eb"></div><div class="sw" data-color="#9a3412" style="background:#9a3412"></div><div class="sw" data-color="#16a34a" style="background:#16a34a"></div></div></div></div>
+    <div class="grid2"><div><label class="small">枠線色</label><input id="propBorderColor" type="color" value="#2563eb" /><div class="palette" data-target="propBorderColor"><div class="sw" data-color="#2563eb" style="background:#2563eb"></div><div class="sw" data-color="#1d4ed8" style="background:#1d4ed8"></div><div class="sw" data-color="#475569" style="background:#475569"></div><div class="sw" data-color="#0f172a" style="background:#0f172a"></div><div class="sw" data-color="#ef4444" style="background:#ef4444"></div><div class="sw" data-color="#22c55e" style="background:#22c55e"></div></div></div><div><label class="small">枠線太さ</label><input id="propBorderWidth" type="range" min="0" max="8" value="0" /></div></div>
     <label class="small">角丸</label><input id="propRadius" type="range" min="0" max="40" value="10" />
     <label class="small">余白</label><input id="propPadding" type="range" min="4" max="36" value="10" />
     <label class="small">文字サイズ</label><input id="propFont" type="range" min="12" max="36" value="16" />
@@ -113,7 +116,7 @@ function content(node){const el=document.createElement('div'); el.className='con
 const acts=[["複製","dup"],["削除","del"],["前面","front"],["背面","back"],["左","left"],["中X","cx"],["右","right"],["上","top"],["中Y","cy"],["下","bottom"],["横均等","dx"],["縦均等","dy"]];
 function setupBubble(){ui.bubble.innerHTML='';acts.forEach(([l,a])=>{const d=document.createElement('div');d.className='act';d.textContent=l;d.dataset.a=a;d.onclick=()=>runAct(a);ui.bubble.appendChild(d)})}
 function runAct(a){if(!sel())return; if(a==='dup')return dup(); if(a==='del')return del(); if(a==='front')return zFront(); if(a==='back')return zBack(); if(a==='left')return align('left'); if(a==='cx')return align('center'); if(a==='right')return align('right'); if(a==='top')return align('top'); if(a==='cy')return align('middle'); if(a==='bottom')return align('bottom'); if(a==='dx')return dist('x'); if(a==='dy')return dist('y')}
-function showBubble(id){const el=ui.phone.querySelector(`.node[data-id="${id}"]`); if(!el){ui.bubble.hidden=true;return;} ui.bubble.hidden=false; const r=el.getBoundingClientRect(),p=ui.phone.getBoundingClientRect(); const x=Math.max(6,Math.min((r.left-p.left)+r.width/2-110,p.width-226)); const y=Math.max(6,(r.top-p.top)-74); ui.bubble.style.left=`${x}px`; ui.bubble.style.top=`${y}px`}
+function showBubble(id){const el=ui.phone.querySelector(`.node[data-id="${id}"]`); if(!el){ui.bubble.hidden=true;return;} ui.bubble.hidden=false; const r=el.getBoundingClientRect(),p=ui.phone.getBoundingClientRect(); const bw=ui.bubble.offsetWidth||220,bh=ui.bubble.offsetHeight||72; const nodeX=r.left-p.left,nodeY=r.top-p.top; let x=Math.max(6,Math.min(nodeX+r.width/2-bw/2,p.width-bw-6)); let y=nodeY-bh-10; if(y<6) y=nodeY+r.height+10; const overlapX=!(x+bw<nodeX||x>nodeX+r.width); const overlapY=!(y+bh<nodeY||y>nodeY+r.height); if(overlapX&&overlapY){ x=Math.min(p.width-bw-6,nodeX+r.width+10); if(x<6) x=6; } ui.bubble.style.left=`${x}px`; ui.bubble.style.top=`${y}px`}
 
 function render(){state.nodes=(state.nodes||[]).map(norm).sort((a,b)=>a.z-b.z);ui.phone.innerHTML='';ui.phone.style.transform=`scale(${state.options.zoom/100})`;ui.zoom.value=state.options.zoom;ui.zoomLabel.textContent=`${state.options.zoom}%`;ui.phone.classList.toggle('show-grid',!!state.options.grid);
 state.nodes.forEach(n=>{const box=document.createElement('div');box.className=`node ${n.id===selectedId?'selected':''}`;box.dataset.id=n.id;styleNode(box,n);const hint=document.createElement('span');hint.className='hint';hint.textContent=n.type;box.appendChild(hint);const c=content(n);box.appendChild(c);const rs=document.createElement('span');rs.className='resize';box.appendChild(rs);
@@ -122,7 +125,7 @@ box.addEventListener('click',()=>{selectedId=n.id;syncProps();render();if(suppre
 ui.phone.appendChild(box)});
 syncProps(); if(selectedId)showBubble(selectedId); else ui.bubble.hidden=true; renderPreview()}
 
-function inlineEdit(id,c){const n=state.nodes.find(x=>x.id===id); if(!n||n.type==='input')return; snapshot(); c.contentEditable='true'; c.focus(); msg('直接編集: Enterで確定'); const done=()=>{c.contentEditable='false'; n.text=(c.textContent||'').trim()||'（空）'; ui.propText.value=n.text; render()}; c.onblur=done; c.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();c.blur()}}}
+function inlineEdit(id,c){const n=state.nodes.find(x=>x.id===id); if(!n||n.type==='input')return; snapshot(); c.contentEditable='true'; c.focus(); msg('直接編集: Enterで確定'); const done=()=>{c.contentEditable='false'; n.text=(c.textContent||'').trim(); ui.propText.value=n.text; render()}; c.onblur=done; c.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();c.blur()}}}
 function dragStart(e,id){if(e.target.classList.contains('resize'))return;const n=state.nodes.find(x=>x.id===id);if(!n)return; snapshot(); selectedId=id;const z=state.options.zoom/100,sx=e.clientX,sy=e.clientY,ox=n.x,oy=n.y;
 const mv=ev=>{n.x=clamp(snap(ox+(ev.clientX-sx)/z),0,base.w-n.w);n.y=clamp(snap(oy+(ev.clientY-sy)/z),0,base.h-n.h);render()};
 const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);if(Math.abs(n.x-ox)>1||Math.abs(n.y-oy)>1)suppressInline=true};
@@ -133,7 +136,7 @@ const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventLis
 
 function syncProps(){const n=sel(),d=!n;[ui.propText,ui.propBg,ui.propColor,ui.propBorderColor,ui.propBorderWidth,ui.propRadius,ui.propPadding,ui.propFont,ui.propOpacity,ui.propRotate,ui.propW,ui.propH,ui.propX,ui.propY].forEach(x=>x.disabled=d);if(!n)return;
 ui.propText.value=n.text;ui.propBg.value=n.style.bg;ui.propColor.value=n.style.color;ui.propBorderColor.value=n.style.borderColor;ui.propBorderWidth.value=n.style.borderWidth;ui.propRadius.value=n.style.radius;ui.propPadding.value=n.style.padding;ui.propFont.value=n.style.fontSize;ui.propOpacity.value=n.style.opacity;ui.propRotate.value=n.style.rotate;ui.propW.value=n.w;ui.propH.value=n.h;ui.propX.value=n.x;ui.propY.value=n.y}
-function applyLive(){const n=sel(); if(!n)return; n.text=ui.propText.value||'（空）';n.style.bg=ui.propBg.value;n.style.color=ui.propColor.value;n.style.borderColor=ui.propBorderColor.value;n.style.borderWidth=+ui.propBorderWidth.value;n.style.radius=+ui.propRadius.value;n.style.padding=+ui.propPadding.value;n.style.fontSize=+ui.propFont.value;n.style.opacity=+ui.propOpacity.value;n.style.rotate=+ui.propRotate.value;n.w=clamp(+ui.propW.value,40,base.w-n.x);n.h=clamp(+ui.propH.value,32,base.h-n.y);n.x=clamp(+ui.propX.value,0,base.w-n.w);n.y=clamp(+ui.propY.value,0,base.h-n.h);render()}
+function applyLive(){const n=sel(); if(!n)return; n.text=ui.propText.value;n.style.bg=ui.propBg.value;n.style.color=ui.propColor.value;n.style.borderColor=ui.propBorderColor.value;n.style.borderWidth=+ui.propBorderWidth.value;n.style.radius=+ui.propRadius.value;n.style.padding=+ui.propPadding.value;n.style.fontSize=+ui.propFont.value;n.style.opacity=+ui.propOpacity.value;n.style.rotate=+ui.propRotate.value;n.w=clamp(+ui.propW.value,40,base.w-n.x);n.h=clamp(+ui.propH.value,32,base.h-n.y);n.x=clamp(+ui.propX.value,0,base.w-n.w);n.y=clamp(+ui.propY.value,0,base.h-n.h);render()}
 
 function add(type){snapshot();const off=state.nodes.length*12;const n=makeNode(type,clamp(24+off,0,260),clamp(28+off,0,600));n.z=Date.now();state.nodes.push(n);selectedId=n.id;render()}
 function dup(){const n=sel();if(!n)return; snapshot(); const c=JSON.parse(JSON.stringify(n)); c.id=crypto.randomUUID(); c.x=clamp(n.x+16,0,base.w-n.w); c.y=clamp(n.y+16,0,base.h-n.h); c.z=Math.max(...state.nodes.map(x=>x.z))+1; c.text=`${n.text} コピー`; state.nodes.push(c); selectedId=c.id; render()}
@@ -154,6 +157,18 @@ ui.toolRow.addEventListener('click',e=>{const t=e.target.closest('[data-tool]');
 ui.closePreview.onclick=()=>ui.preview.classList.remove('open'); ui.preview.onclick=e=>{if(e.target===ui.preview)ui.preview.classList.remove('open')};
 ui.zoom.oninput=()=>{state.options.zoom=+ui.zoom.value;render()};
 [ui.propText,ui.propBg,ui.propColor,ui.propBorderColor,ui.propBorderWidth,ui.propRadius,ui.propPadding,ui.propFont,ui.propOpacity,ui.propRotate,ui.propW,ui.propH,ui.propX,ui.propY].forEach(i=>i.addEventListener('input',applyLive));
+
+document.querySelectorAll('.palette').forEach((pal)=>{
+  pal.addEventListener('click',(e)=>{
+    const sw=e.target.closest('.sw');
+    if(!sw)return;
+    const targetId=pal.dataset.target;
+    const input=document.getElementById(targetId);
+    if(!input)return;
+    input.value=sw.dataset.color;
+    applyLive();
+  });
+});
 ui.generateBtn.onclick=async()=>{const key=ui.apiKey.value.trim(),prompt=ui.prompt.value.trim();if(!key||!prompt){ui.aiStatus.textContent='APIキーと要件を入力してください。';return}ui.generateBtn.disabled=true;ui.aiStatus.textContent='AIで生成中...';
 try{const raw=ui.provider.value==='openai'?await callOpenAI({key,model:ui.model.value.trim(),prompt}):await callHF({key,model:ui.model.value.trim(),prompt});const p=extractJson(raw);if(!p)throw new Error();applyGenerated(p);ui.aiStatus.textContent='AIレイアウトを反映しました。'}
 catch{applyGenerated({elements:[{type:'heading',text:'テンプレート',x:24,y:28,w:250,h:56,style:{bg:'#fff7ed',color:'#9a3412',radius:12,padding:10,fontSize:22}},{type:'text',text:prompt,x:24,y:96,w:320,h:120,style:{bg:'#fff',color:'#334155',radius:10,padding:10,fontSize:16}},{type:'button',text:'開始',x:24,y:230,w:150,h:48,style:{bg:'#2563eb',color:'#fff',radius:10,padding:10,fontSize:16}}]});ui.aiStatus.textContent='AI解析失敗のためテンプレートを作成しました。'}
