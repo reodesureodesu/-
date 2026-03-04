@@ -160,6 +160,33 @@ TapApp Studio（以下「本アプリ」）は、以下の方針で情報を取�
 
 ---
 
+
+## デモ録画（開発者モード）
+
+Playwright を使って、**Web / iOS / Android** 向けのデモ動画を録画できます。
+
+1. ローカルサーバー起動
+
+```bash
+python -m http.server 4173
+```
+
+2. 別ターミナルで録画スクリプト実行
+
+```bash
+python scripts/record_demo_playwright.py
+```
+
+3. 出力動画（`artifacts/`）
+
+- `tapapp-demo-web.webm`
+- `tapapp-demo-ios.webm`
+- `tapapp-demo-android.webm`
+
+> iOS / Android は実機ではなく、ブラウザのモバイルエミュレーション設定で録画します。
+
+---
+
 ## デプロイ方法（Vercel）
 
 1. このリポジトリを GitHub に push
