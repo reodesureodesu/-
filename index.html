@@ -16,7 +16,7 @@
       }
       * { box-sizing: border-box; }
       body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "Noto Sans JP", system-ui, sans-serif; }
-      .app { min-height: 100vh; display: grid; gap: 12px; padding: 12px; grid-template-columns: 310px 1fr 320px; }
+      .app { min-height: 100vh; display: grid; gap: 12px; padding: 12px; grid-template-columns: 310px 1fr 330px; }
       .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; overflow: auto; }
       h1,h2,h3 { margin: 0 0 8px; }
       h1 { font-size: 1.1rem; }
@@ -31,20 +31,24 @@
       button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
       button:disabled { opacity:.5; cursor:not-allowed; }
 
-      .builder { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; }
+      .builder { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 10px; }
       .toolbar { display:flex; flex-wrap: wrap; gap: 8px; }
       .toolbar button { width:auto; padding: 7px 10px; }
       .quick { padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
 
-      .stage-wrap { background: linear-gradient(180deg,#f6f9ff,#fcfdff); border: 1px dashed #adc0d9; border-radius: 16px; padding: 12px; display: grid; place-items: center; min-height: 560px; }
+      .stage-wrap { background: linear-gradient(180deg,#f6f9ff,#fcfdff); border: 1px dashed #adc0d9; border-radius: 16px; padding: 12px; display: grid; place-items: center; min-height: 560px; overflow: auto; }
+      .zoom-wrap { display: grid; gap: 6px; }
       .phone {
-        width: min(390px, 100%);
-        aspect-ratio: 9 / 19.5;
+        width: 390px;
+        height: 844px;
         border: 2px solid #c7d5e6;
         border-radius: 24px;
         background: white;
         position: relative;
         overflow: hidden;
+        transform-origin: top center;
+      }
+      .show-grid {
         background-image: linear-gradient(to right, rgba(219,234,254,.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(219,234,254,.45) 1px, transparent 1px);
         background-size: 20px 20px;
       }
@@ -86,7 +90,49 @@
       }
       .status { min-height: 1.1em; font-size:.84rem; color: var(--muted); }
 
-      @media (max-width: 1150px) { .app { grid-template-columns: 1fr; } .stage-wrap { min-height: 420px; } }
+      .preview-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-items: center;
+        background: rgba(15, 23, 42, 0.55);
+        z-index: 40;
+        padding: 16px;
+      }
+      .preview-modal.open { display: grid; }
+      .preview-panel {
+        width: min(1180px, 100%);
+        max-height: 92vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        padding: 12px;
+      }
+      .preview-header { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+      .preview-devices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .device {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: #f8fafc;
+      }
+      .screen {
+        position: relative;
+        background: #fff;
+        border: 1px solid #c7d5e6;
+        overflow: hidden;
+      }
+      .screen.mobile { width: 100%; aspect-ratio: 9 / 19.5; border-radius: 18px; }
+      .screen.tablet { width: 100%; aspect-ratio: 4 / 3; border-radius: 12px; }
+      .screen.desktop { width: 100%; aspect-ratio: 16 / 10; border-radius: 10px; }
+      .preview-node { position: absolute; overflow: hidden; }
+
+      @media (max-width: 1200px) {
+        .app { grid-template-columns: 1fr; }
+        .stage-wrap { min-height: 420px; }
+        .preview-devices { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
@@ -94,7 +140,7 @@
       <section class="panel stack">
         <div>
           <h1>TapApp Studio</h1>
-          <p class="small">Lovable風に近づけるため、自由配置キャンバス（ドラッグ移動・リサイズ・タップ選択・ダブルタップ編集）にしました。</p>
+          <p class="small">プレビュー機能を追加。編集キャンバスとほぼ同じ見た目をモバイル/タブレット/デスクトップで同時確認できます。</p>
         </div>
 
         <div class="stack">
@@ -130,14 +176,28 @@
         <div class="quick stack">
           <div class="small">クイック操作</div>
           <div class="grid3">
+            <button id="undoBtn">Undo</button>
+            <button id="redoBtn">Redo</button>
             <button id="dupBtn">複製</button>
+          </div>
+          <div class="grid3">
             <button id="frontBtn">前面へ</button>
             <button id="backBtn">背面へ</button>
+            <button id="previewBtn" class="primary">プレビュー</button>
           </div>
         </div>
 
+        <div class="quick stack zoom-wrap">
+          <div class="grid2">
+            <button id="toggleGridBtn">グリッドON/OFF</button>
+            <button id="toggleSnapBtn">吸着ON/OFF</button>
+          </div>
+          <label class="small">ズーム <span id="zoomLabel">100%</span></label>
+          <input id="zoomRange" type="range" min="50" max="140" value="100" />
+        </div>
+
         <div class="stage-wrap">
-          <div id="phone" class="phone"></div>
+          <div id="phone" class="phone show-grid"></div>
         </div>
 
         <div class="stack">
@@ -156,7 +216,7 @@
       <section class="panel stack">
         <div>
           <h2>3) 選択中の詳細編集</h2>
-          <p class="small">要素をタップ選択。ダブルクリック（スマホならダブルタップ）で直接文字編集もできます。</p>
+          <p class="small">さらに自由度を上げるため、枠線色/太さ・透明度・回転を追加しています。</p>
         </div>
         <label class="small">テキスト</label>
         <input id="propText" />
@@ -164,9 +224,15 @@
           <div><label class="small">背景色</label><input id="propBg" type="color" value="#ffffff" /></div>
           <div><label class="small">文字色</label><input id="propColor" type="color" value="#111827" /></div>
         </div>
+        <div class="grid2">
+          <div><label class="small">枠線色</label><input id="propBorderColor" type="color" value="#2563eb" /></div>
+          <div><label class="small">枠線太さ</label><input id="propBorderWidth" type="range" min="0" max="8" value="0" /></div>
+        </div>
         <label class="small">角丸</label><input id="propRadius" type="range" min="0" max="40" value="10" />
         <label class="small">余白</label><input id="propPadding" type="range" min="4" max="36" value="10" />
         <label class="small">文字サイズ</label><input id="propFont" type="range" min="12" max="36" value="16" />
+        <label class="small">透明度 (%)</label><input id="propOpacity" type="range" min="20" max="100" value="100" />
+        <label class="small">回転 (deg)</label><input id="propRotate" type="range" min="-30" max="30" value="0" />
         <div class="grid2">
           <div><label class="small">幅(px)</label><input id="propW" type="number" min="40" /></div>
           <div><label class="small">高さ(px)</label><input id="propH" type="number" min="32" /></div>
@@ -183,8 +249,34 @@
       </section>
     </main>
 
+    <section id="previewModal" class="preview-modal">
+      <div class="preview-panel">
+        <div class="preview-header">
+          <h2>ライブプレビュー</h2>
+          <div style="display:flex; gap:8px;">
+            <button id="refreshPreviewBtn">更新</button>
+            <button id="closePreviewBtn">閉じる</button>
+          </div>
+        </div>
+        <div class="preview-devices">
+          <div class="device">
+            <h3>Mobile</h3>
+            <div id="mobilePreview" class="screen mobile"></div>
+          </div>
+          <div class="device">
+            <h3>Tablet</h3>
+            <div id="tabletPreview" class="screen tablet"></div>
+          </div>
+          <div class="device">
+            <h3>Desktop</h3>
+            <div id="desktopPreview" class="screen desktop"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <script>
-      const phoneSize = { w: 390, h: 844 };
+      const baseSize = { w: 390, h: 844 };
       const types = ["heading", "text", "button", "input", "card"];
       const defaultsByType = {
         heading: { text: "見出し", w: 260, h: 58, fontSize: 24 },
@@ -206,24 +298,41 @@
         propText: document.getElementById("propText"),
         propBg: document.getElementById("propBg"),
         propColor: document.getElementById("propColor"),
+        propBorderColor: document.getElementById("propBorderColor"),
+        propBorderWidth: document.getElementById("propBorderWidth"),
         propRadius: document.getElementById("propRadius"),
         propPadding: document.getElementById("propPadding"),
         propFont: document.getElementById("propFont"),
+        propOpacity: document.getElementById("propOpacity"),
+        propRotate: document.getElementById("propRotate"),
         propW: document.getElementById("propW"),
         propH: document.getElementById("propH"),
         propX: document.getElementById("propX"),
         propY: document.getElementById("propY"),
         applyBtn: document.getElementById("applyBtn"),
         deleteBtn: document.getElementById("deleteBtn"),
+        undoBtn: document.getElementById("undoBtn"),
+        redoBtn: document.getElementById("redoBtn"),
         dupBtn: document.getElementById("dupBtn"),
         frontBtn: document.getElementById("frontBtn"),
         backBtn: document.getElementById("backBtn"),
+        previewBtn: document.getElementById("previewBtn"),
+        toggleGridBtn: document.getElementById("toggleGridBtn"),
+        toggleSnapBtn: document.getElementById("toggleSnapBtn"),
+        zoomRange: document.getElementById("zoomRange"),
+        zoomLabel: document.getElementById("zoomLabel"),
         saveBtn: document.getElementById("saveBtn"),
         loadBtn: document.getElementById("loadBtn"),
         exportBtn: document.getElementById("exportBtn"),
         deployBtn: document.getElementById("deployBtn"),
         saveStatus: document.getElementById("saveStatus"),
-        editStatus: document.getElementById("editStatus")
+        editStatus: document.getElementById("editStatus"),
+        previewModal: document.getElementById("previewModal"),
+        closePreviewBtn: document.getElementById("closePreviewBtn"),
+        refreshPreviewBtn: document.getElementById("refreshPreviewBtn"),
+        mobilePreview: document.getElementById("mobilePreview"),
+        tabletPreview: document.getElementById("tabletPreview"),
+        desktopPreview: document.getElementById("desktopPreview")
       };
 
       function newNode(type, x = 30, y = 30) {
@@ -239,73 +348,128 @@
           style: {
             bg: d.bg || "#ffffff",
             color: d.color || "#111827",
+            borderColor: "#2563eb",
+            borderWidth: 0,
             radius: 10,
             padding: 10,
-            fontSize: d.fontSize || 16
+            fontSize: d.fontSize || 16,
+            opacity: 100,
+            rotate: 0
           }
         };
       }
 
-      let state = JSON.parse(localStorage.getItem("tapapp-state") || "null") || {
+      const bootstrapState = JSON.parse(localStorage.getItem("tapapp-state") || "null");
+      let state = bootstrapState || {
+        options: { showGrid: true, snap: true, zoom: 100 },
         nodes: [newNode("heading", 24, 32), newNode("text", 24, 104), newNode("button", 24, 170)]
       };
+      state.options = state.options || { showGrid: true, snap: true, zoom: 100 };
       let selectedId = state.nodes[0]?.id || null;
+      let history = [];
+      let future = [];
 
       const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
       const selected = () => state.nodes.find((n) => n.id === selectedId);
       const status = (msg) => (ui.editStatus.textContent = msg);
+      const canSnap = () => state.options.snap;
+      const snap = (value, grid = 4) => canSnap() ? Math.round(value / grid) * grid : value;
+
+      function snapshot() {
+        history.push(JSON.stringify(state));
+        if (history.length > 80) history.shift();
+        future = [];
+      }
+
+      function undo() {
+        if (!history.length) return;
+        future.push(JSON.stringify(state));
+        state = JSON.parse(history.pop());
+        selectedId = state.nodes[0]?.id || null;
+        status("Undoしました。");
+        render();
+      }
+
+      function redo() {
+        if (!future.length) return;
+        history.push(JSON.stringify(state));
+        state = JSON.parse(future.pop());
+        selectedId = state.nodes[0]?.id || null;
+        status("Redoしました。");
+        render();
+      }
 
       function normalizeNode(n) {
         n.type = types.includes(n.type) ? n.type : "text";
         n.text = String(n.text || "要素");
-        n.w = clamp(Number(n.w || 120), 40, phoneSize.w);
-        n.h = clamp(Number(n.h || 40), 32, phoneSize.h);
-        n.x = clamp(Number(n.x || 0), 0, phoneSize.w - n.w);
-        n.y = clamp(Number(n.y || 0), 0, phoneSize.h - n.h);
+        n.w = clamp(Number(n.w || 120), 40, baseSize.w);
+        n.h = clamp(Number(n.h || 40), 32, baseSize.h);
+        n.x = clamp(Number(n.x || 0), 0, baseSize.w - n.w);
+        n.y = clamp(Number(n.y || 0), 0, baseSize.h - n.h);
         n.z = Number(n.z || Date.now());
         n.style = n.style || {};
         n.style.bg = n.style.bg || "#ffffff";
         n.style.color = n.style.color || "#111827";
+        n.style.borderColor = n.style.borderColor || "#2563eb";
+        n.style.borderWidth = clamp(Number(n.style.borderWidth ?? 0), 0, 8);
         n.style.radius = clamp(Number(n.style.radius ?? 10), 0, 40);
         n.style.padding = clamp(Number(n.style.padding ?? 10), 4, 36);
         n.style.fontSize = clamp(Number(n.style.fontSize ?? 16), 12, 36);
+        n.style.opacity = clamp(Number(n.style.opacity ?? 100), 20, 100);
+        n.style.rotate = clamp(Number(n.style.rotate ?? 0), -30, 30);
         return n;
       }
 
-      function snap(value, grid = 4) { return Math.round(value / grid) * grid; }
+      function applyNodeStyle(box, n, isPreview = false) {
+        box.style.left = `${n.x}px`;
+        box.style.top = `${n.y}px`;
+        box.style.width = `${n.w}px`;
+        box.style.height = `${n.h}px`;
+        box.style.background = n.style.bg;
+        box.style.color = n.style.color;
+        box.style.borderRadius = `${n.style.radius}px`;
+        box.style.padding = `${n.style.padding}px`;
+        box.style.fontSize = `${n.style.fontSize}px`;
+        box.style.zIndex = `${n.z}`;
+        box.style.opacity = `${n.style.opacity / 100}`;
+        box.style.transform = `rotate(${n.style.rotate}deg)`;
+        box.style.border = `${n.style.borderWidth}px solid ${n.style.borderColor}`;
+        if (isPreview) box.style.pointerEvents = "none";
+      }
+
+      function makeContent(node) {
+        const tag = node.type === "heading" ? "h3" : node.type === "button" ? "button" : node.type === "input" ? "input" : "div";
+        const content = document.createElement(tag);
+        content.className = "content";
+        if (node.type === "input") {
+          content.value = node.text;
+          content.readOnly = true;
+        } else {
+          content.textContent = node.text;
+        }
+        return content;
+      }
 
       function render() {
-        state.nodes = state.nodes.map(normalizeNode).sort((a, b) => a.z - b.z);
+        state.nodes = (state.nodes || []).map(normalizeNode).sort((a, b) => a.z - b.z);
         ui.phone.innerHTML = "";
+        ui.phone.style.transform = `scale(${state.options.zoom / 100})`;
+        ui.zoomRange.value = String(state.options.zoom);
+        ui.zoomLabel.textContent = `${state.options.zoom}%`;
+        ui.phone.classList.toggle("show-grid", !!state.options.showGrid);
 
         state.nodes.forEach((n) => {
           const box = document.createElement("div");
           box.className = `node ${n.id === selectedId ? "selected" : ""}`;
           box.dataset.id = n.id;
-          box.style.left = `${n.x}px`;
-          box.style.top = `${n.y}px`;
-          box.style.width = `${n.w}px`;
-          box.style.height = `${n.h}px`;
-          box.style.background = n.style.bg;
-          box.style.color = n.style.color;
-          box.style.borderRadius = `${n.style.radius}px`;
-          box.style.padding = `${n.style.padding}px`;
-          box.style.fontSize = `${n.style.fontSize}px`;
-          box.style.zIndex = `${n.z}`;
+          applyNodeStyle(box, n);
 
           const hint = document.createElement("span");
           hint.className = "hint";
           hint.textContent = n.type;
           box.appendChild(hint);
 
-          const content = document.createElement(n.type === "heading" ? "h3" : n.type === "button" ? "button" : n.type === "input" ? "input" : "div");
-          content.className = "content";
-          if (n.type === "input") {
-            content.value = n.text;
-            content.readOnly = true;
-          } else {
-            content.textContent = n.text;
-          }
+          const content = makeContent(n);
           box.appendChild(content);
 
           const resize = document.createElement("span");
@@ -325,11 +489,43 @@
         });
 
         syncProps();
+        renderPreviewScreens();
+      }
+
+      function renderPreviewScreens() {
+        const screens = [
+          { el: ui.mobilePreview, w: 390, h: 844 },
+          { el: ui.tabletPreview, w: 834, h: 1112 },
+          { el: ui.desktopPreview, w: 1440, h: 900 }
+        ];
+
+        screens.forEach(({ el, w, h }) => {
+          el.innerHTML = "";
+          const sx = w / baseSize.w;
+          const sy = h / baseSize.h;
+          state.nodes.forEach((n) => {
+            const node = normalizeNode(JSON.parse(JSON.stringify(n)));
+            const p = document.createElement("div");
+            p.className = "preview-node";
+            node.x = node.x * sx;
+            node.y = node.y * sy;
+            node.w = node.w * sx;
+            node.h = node.h * sy;
+            node.style.fontSize = clamp(node.style.fontSize * Math.min(sx, sy), 10, 60);
+            node.style.padding = clamp(node.style.padding * Math.min(sx, sy), 2, 50);
+            applyNodeStyle(p, node, true);
+            const c = makeContent(node);
+            c.style.pointerEvents = "none";
+            p.appendChild(c);
+            el.appendChild(p);
+          });
+        });
       }
 
       function inlineEdit(id, contentEl) {
         const n = state.nodes.find((x) => x.id === id);
         if (!n || n.type === "input") return;
+        snapshot();
         contentEl.contentEditable = "true";
         contentEl.focus();
         status("直接編集: Enterまたは外側タップで確定");
@@ -338,6 +534,7 @@
           n.text = contentEl.textContent.trim() || "（空）";
           ui.propText.value = n.text;
           status("テキストを反映しました。");
+          render();
         };
         contentEl.onblur = commit;
         contentEl.onkeydown = (e) => {
@@ -352,18 +549,19 @@
         if (e.target.classList.contains("resize")) return;
         const n = state.nodes.find((x) => x.id === id);
         if (!n) return;
+        snapshot();
         selectedId = id;
-        const rect = ui.phone.getBoundingClientRect();
+        const scale = state.options.zoom / 100;
         const startX = e.clientX;
         const startY = e.clientY;
         const ox = n.x;
         const oy = n.y;
 
         const move = (ev) => {
-          const dx = ev.clientX - startX;
-          const dy = ev.clientY - startY;
-          n.x = clamp(snap(ox + dx), 0, phoneSize.w - n.w);
-          n.y = clamp(snap(oy + dy), 0, phoneSize.h - n.h);
+          const dx = (ev.clientX - startX) / scale;
+          const dy = (ev.clientY - startY) / scale;
+          n.x = clamp(snap(ox + dx), 0, baseSize.w - n.w);
+          n.y = clamp(snap(oy + dy), 0, baseSize.h - n.h);
           render();
         };
         const up = () => {
@@ -380,17 +578,19 @@
         e.stopPropagation();
         const n = state.nodes.find((x) => x.id === id);
         if (!n) return;
+        snapshot();
         selectedId = id;
+        const scale = state.options.zoom / 100;
         const sx = e.clientX;
         const sy = e.clientY;
         const ow = n.w;
         const oh = n.h;
 
         const move = (ev) => {
-          const dw = ev.clientX - sx;
-          const dh = ev.clientY - sy;
-          n.w = clamp(snap(ow + dw), 40, phoneSize.w - n.x);
-          n.h = clamp(snap(oh + dh), 32, phoneSize.h - n.y);
+          const dw = (ev.clientX - sx) / scale;
+          const dh = (ev.clientY - sy) / scale;
+          n.w = clamp(snap(ow + dw), 40, baseSize.w - n.x);
+          n.h = clamp(snap(oh + dh), 32, baseSize.h - n.y);
           render();
         };
         const up = () => {
@@ -406,14 +606,23 @@
       function syncProps() {
         const n = selected();
         const disabled = !n;
-        [ui.propText, ui.propBg, ui.propColor, ui.propRadius, ui.propPadding, ui.propFont, ui.propW, ui.propH, ui.propX, ui.propY, ui.applyBtn, ui.deleteBtn, ui.dupBtn, ui.frontBtn, ui.backBtn].forEach((x) => (x.disabled = disabled));
+        [
+          ui.propText, ui.propBg, ui.propColor, ui.propBorderColor, ui.propBorderWidth,
+          ui.propRadius, ui.propPadding, ui.propFont, ui.propOpacity, ui.propRotate,
+          ui.propW, ui.propH, ui.propX, ui.propY,
+          ui.applyBtn, ui.deleteBtn, ui.dupBtn, ui.frontBtn, ui.backBtn
+        ].forEach((x) => (x.disabled = disabled));
         if (!n) return;
         ui.propText.value = n.text;
         ui.propBg.value = n.style.bg;
         ui.propColor.value = n.style.color;
+        ui.propBorderColor.value = n.style.borderColor;
+        ui.propBorderWidth.value = n.style.borderWidth;
         ui.propRadius.value = n.style.radius;
         ui.propPadding.value = n.style.padding;
         ui.propFont.value = n.style.fontSize;
+        ui.propOpacity.value = n.style.opacity;
+        ui.propRotate.value = n.style.rotate;
         ui.propW.value = n.w;
         ui.propH.value = n.h;
         ui.propX.value = n.x;
@@ -421,6 +630,7 @@
       }
 
       function addNode(type) {
+        snapshot();
         const offset = state.nodes.length * 12;
         const n = newNode(type, clamp(24 + offset, 0, 260), clamp(28 + offset, 0, 600));
         n.z = Date.now();
@@ -433,11 +643,12 @@
       function duplicateNode() {
         const n = selected();
         if (!n) return;
+        snapshot();
         const cp = JSON.parse(JSON.stringify(n));
         cp.id = crypto.randomUUID();
-        cp.x = clamp(n.x + 16, 0, phoneSize.w - n.w);
-        cp.y = clamp(n.y + 16, 0, phoneSize.h - n.h);
-        cp.z = Date.now();
+        cp.x = clamp(n.x + 16, 0, baseSize.w - n.w);
+        cp.y = clamp(n.y + 16, 0, baseSize.h - n.h);
+        cp.z = Math.max(...state.nodes.map((x) => x.z)) + 1;
         cp.text = `${n.text} コピー`;
         state.nodes.push(cp);
         selectedId = cp.id;
@@ -448,6 +659,7 @@
       function bringFront() {
         const n = selected();
         if (!n) return;
+        snapshot();
         n.z = Math.max(...state.nodes.map((x) => x.z)) + 1;
         status("前面に移動しました。");
         render();
@@ -456,6 +668,7 @@
       function sendBack() {
         const n = selected();
         if (!n) return;
+        snapshot();
         n.z = Math.min(...state.nodes.map((x) => x.z)) - 1;
         status("背面に移動しました。");
         render();
@@ -475,7 +688,9 @@
           ui.saveStatus.textContent = "保存データがありません。";
           return;
         }
+        snapshot();
         state = d;
+        state.options = state.options || { showGrid: true, snap: true, zoom: 100 };
         selectedId = state.nodes[0].id;
         render();
         ui.saveStatus.textContent = "再開しました。";
@@ -494,7 +709,7 @@
           body: JSON.stringify({
             model: model || "gpt-4o-mini",
             messages: [
-              { role: "system", content: "ノーコードアプリ設計アシスタント。JSONのみで返す。形式:{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"x\":20,\"y\":20,\"w\":220,\"h\":48,\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"radius\":10,\"padding\":10,\"fontSize\":16}}]}" },
+              { role: "system", content: "ノーコードアプリ設計アシスタント。JSONのみで返す。形式:{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"x\":20,\"y\":20,\"w\":220,\"h\":48,\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"borderColor\":\"#2563eb\",\"borderWidth\":0,\"radius\":10,\"padding\":10,\"fontSize\":16,\"opacity\":100,\"rotate\":0}}]}" },
               { role: "user", content: prompt }
             ],
             temperature: 0.7
@@ -510,8 +725,8 @@
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
           body: JSON.stringify({
-            inputs: `JSONのみ返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","x":20,"y":20,"w":220,"h":48,"style":{"bg":"#ffffff","color":"#111827","radius":10,"padding":10,"fontSize":16}}]} 要件:${prompt}`,
-            parameters: { max_new_tokens: 600, temperature: 0.4 }
+            inputs: `JSONのみ返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","x":20,"y":20,"w":220,"h":48,"style":{"bg":"#ffffff","color":"#111827","borderColor":"#2563eb","borderWidth":0,"radius":10,"padding":10,"fontSize":16,"opacity":100,"rotate":0}}]} 要件:${prompt}`,
+            parameters: { max_new_tokens: 700, temperature: 0.4 }
           })
         });
         if (!res.ok) throw new Error(`HF API error ${res.status}`);
@@ -522,6 +737,7 @@
 
       function applyGenerated(parsed) {
         if (!parsed?.elements?.length) throw new Error("Invalid schema");
+        snapshot();
         state.nodes = parsed.elements.slice(0, 30).map((e, i) => normalizeNode({
           id: crypto.randomUUID(),
           type: types.includes(e.type) ? e.type : "text",
@@ -537,36 +753,85 @@
         render();
       }
 
+      function handleKeyboardNudge(e) {
+        const n = selected();
+        if (!n) return;
+        const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+        if (!keys.includes(e.key)) return;
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        if (["input", "textarea", "select"].includes(activeTag)) return;
+        e.preventDefault();
+        snapshot();
+        const step = e.shiftKey ? 10 : 2;
+        if (e.key === "ArrowLeft") n.x = clamp(n.x - step, 0, baseSize.w - n.w);
+        if (e.key === "ArrowRight") n.x = clamp(n.x + step, 0, baseSize.w - n.w);
+        if (e.key === "ArrowUp") n.y = clamp(n.y - step, 0, baseSize.h - n.h);
+        if (e.key === "ArrowDown") n.y = clamp(n.y + step, 0, baseSize.h - n.h);
+        render();
+      }
+
       ui.addButtons.forEach((btn) => (btn.onclick = () => addNode(btn.dataset.add)));
 
       ui.applyBtn.onclick = () => {
         const n = selected();
         if (!n) return;
+        snapshot();
         n.text = ui.propText.value || "（空）";
         n.style.bg = ui.propBg.value;
         n.style.color = ui.propColor.value;
+        n.style.borderColor = ui.propBorderColor.value;
+        n.style.borderWidth = Number(ui.propBorderWidth.value);
         n.style.radius = Number(ui.propRadius.value);
         n.style.padding = Number(ui.propPadding.value);
         n.style.fontSize = Number(ui.propFont.value);
-        n.w = clamp(Number(ui.propW.value), 40, phoneSize.w - n.x);
-        n.h = clamp(Number(ui.propH.value), 32, phoneSize.h - n.y);
-        n.x = clamp(Number(ui.propX.value), 0, phoneSize.w - n.w);
-        n.y = clamp(Number(ui.propY.value), 0, phoneSize.h - n.h);
+        n.style.opacity = Number(ui.propOpacity.value);
+        n.style.rotate = Number(ui.propRotate.value);
+        n.w = clamp(Number(ui.propW.value), 40, baseSize.w - n.x);
+        n.h = clamp(Number(ui.propH.value), 32, baseSize.h - n.y);
+        n.x = clamp(Number(ui.propX.value), 0, baseSize.w - n.w);
+        n.y = clamp(Number(ui.propY.value), 0, baseSize.h - n.h);
         status("プロパティを反映しました。");
         render();
       };
 
       ui.deleteBtn.onclick = () => {
         if (!selectedId) return;
+        snapshot();
         state.nodes = state.nodes.filter((n) => n.id !== selectedId);
         selectedId = state.nodes[0]?.id || null;
         status("削除しました。");
         render();
       };
 
+      ui.undoBtn.onclick = undo;
+      ui.redoBtn.onclick = redo;
       ui.dupBtn.onclick = duplicateNode;
       ui.frontBtn.onclick = bringFront;
       ui.backBtn.onclick = sendBack;
+      ui.previewBtn.onclick = () => {
+        renderPreviewScreens();
+        ui.previewModal.classList.add("open");
+      };
+      ui.closePreviewBtn.onclick = () => ui.previewModal.classList.remove("open");
+      ui.refreshPreviewBtn.onclick = () => renderPreviewScreens();
+      ui.previewModal.onclick = (e) => {
+        if (e.target === ui.previewModal) ui.previewModal.classList.remove("open");
+      };
+
+      ui.toggleGridBtn.onclick = () => {
+        state.options.showGrid = !state.options.showGrid;
+        render();
+      };
+      ui.toggleSnapBtn.onclick = () => {
+        state.options.snap = !state.options.snap;
+        status(`吸着: ${state.options.snap ? "ON" : "OFF"}`);
+        render();
+      };
+      ui.zoomRange.oninput = () => {
+        state.options.zoom = Number(ui.zoomRange.value);
+        render();
+      };
+
       ui.saveBtn.onclick = () => saveState();
       ui.loadBtn.onclick = loadState;
       ui.exportBtn.onclick = () => {
@@ -599,7 +864,7 @@
           const parsed = extractJson(raw);
           if (!parsed) throw new Error("JSON parse failed");
           applyGenerated(parsed);
-          ui.aiStatus.textContent = "AIレイアウトを反映しました。タップで自由に調整できます。";
+          ui.aiStatus.textContent = "AIレイアウトを反映しました。プレビューで確認できます。";
         } catch (err) {
           console.error(err);
           applyGenerated({
@@ -615,6 +880,8 @@
         }
       };
 
+      window.addEventListener("keydown", handleKeyboardNudge);
+
       (function boot() {
         ui.apiKey.value = localStorage.getItem("tapapp-api-key") || "";
         ui.provider.value = localStorage.getItem("tapapp-provider") || "openai";
@@ -622,6 +889,9 @@
         state.nodes = (state.nodes || []).map(normalizeNode);
         if (!state.nodes.length) state.nodes = [newNode("heading")];
         selectedId = state.nodes[0].id;
+        state.options.showGrid = state.options.showGrid ?? true;
+        state.options.snap = state.options.snap ?? true;
+        state.options.zoom = clamp(Number(state.options.zoom || 100), 50, 140);
         render();
       })();
     </script>
