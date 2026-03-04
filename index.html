@@ -6,78 +6,87 @@
     <title>TapApp Studio</title>
     <style>
       :root {
-        color-scheme: light;
-        font-family: "Inter", "Noto Sans JP", system-ui, sans-serif;
-        --bg: #eef2f7;
-        --panel: #ffffff;
-        --text: #18212f;
-        --muted: #5f6b7b;
-        --accent: #3b82f6;
+        --bg: #edf2f7;
+        --panel: #fff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #d8e0ea;
+        --accent: #2563eb;
         --accent-soft: #dbeafe;
-        --border: #d9e0ea;
       }
       * { box-sizing: border-box; }
-      body { margin: 0; background: var(--bg); color: var(--text); }
-      .app { min-height: 100vh; display: grid; grid-template-columns: 320px 1fr 320px; gap: 14px; padding: 14px; }
-      .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; overflow: auto; }
-      h1, h2, h3 { margin: 0 0 10px; }
-      h1 { font-size: 1.2rem; }
-      h2 { font-size: 1.05rem; }
-      h3 { font-size: 0.95rem; color: var(--muted); }
-      .small { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "Noto Sans JP", system-ui, sans-serif; }
+      .app { min-height: 100vh; display: grid; gap: 12px; padding: 12px; grid-template-columns: 310px 1fr 320px; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; overflow: auto; }
+      h1,h2,h3 { margin: 0 0 8px; }
+      h1 { font-size: 1.1rem; }
+      h2 { font-size: 1rem; }
+      .small { font-size: .84rem; color: var(--muted); line-height: 1.45; }
       .stack { display: grid; gap: 10px; }
-      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-      .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-      textarea, input, select, button { font: inherit; width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+      input,select,textarea,button { width: 100%; font: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 9px; }
       textarea { min-height: 88px; resize: vertical; }
-      button { background: white; cursor: pointer; }
-      button.primary { background: var(--accent); color: white; border-color: var(--accent); }
-      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      button { background: #fff; cursor: pointer; }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity:.5; cursor:not-allowed; }
+
       .builder { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; }
-      .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
-      .toolbar button { width: auto; padding: 8px 12px; }
-      .quick-row { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
-      .canvas {
-        background: linear-gradient(180deg, #f4f8ff, #fdfdff);
-        border: 1px dashed #b4c2d6;
-        border-radius: 16px;
-        padding: 16px;
-        min-height: 520px;
-        display: grid;
-        gap: 10px;
-        align-content: start;
+      .toolbar { display:flex; flex-wrap: wrap; gap: 8px; }
+      .toolbar button { width:auto; padding: 7px 10px; }
+      .quick { padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
+
+      .stage-wrap { background: linear-gradient(180deg,#f6f9ff,#fcfdff); border: 1px dashed #adc0d9; border-radius: 16px; padding: 12px; display: grid; place-items: center; min-height: 560px; }
+      .phone {
+        width: min(390px, 100%);
+        aspect-ratio: 9 / 19.5;
+        border: 2px solid #c7d5e6;
+        border-radius: 24px;
+        background: white;
+        position: relative;
+        overflow: hidden;
+        background-image: linear-gradient(to right, rgba(219,234,254,.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(219,234,254,.45) 1px, transparent 1px);
+        background-size: 20px 20px;
       }
-      .element {
+
+      .node {
+        position: absolute;
         border: 1px solid transparent;
         border-radius: 10px;
-        transition: 0.2s;
-        position: relative;
-        min-height: 44px;
+        min-width: 40px;
+        min-height: 32px;
         display: grid;
         align-content: center;
+        cursor: move;
+        user-select: none;
       }
-      .element-content { outline: none; width: 100%; }
-      .element.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-      .element.dragging { opacity: 0.55; }
-      .element.drop-target { box-shadow: 0 0 0 3px #fde68a; }
-      .drag-handle {
+      .node.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+      .content { outline: none; width: 100%; height: 100%; }
+      .resize {
+        position: absolute;
+        right: -7px;
+        bottom: -7px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid #fff;
+        cursor: nwse-resize;
+      }
+      .hint {
         position: absolute;
         top: 8px;
-        right: 8px;
-        font-size: 0.75rem;
-        color: #1d4ed8;
+        left: 8px;
+        font-size: .72rem;
         background: #eff6ff;
+        color: #1d4ed8;
         border: 1px solid #bfdbfe;
         border-radius: 999px;
         padding: 2px 8px;
       }
-      .footer { border-top: 1px solid var(--border); padding-top: 10px; }
-      .status { font-size: 0.85rem; color: var(--muted); min-height: 1.2em; }
-      .badge { display: inline-block; font-size: 0.75rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 999px; padding: 3px 8px; }
-      @media (max-width: 1100px) {
-        .app { grid-template-columns: 1fr; }
-        .canvas { min-height: 330px; }
-      }
+      .status { min-height: 1.1em; font-size:.84rem; color: var(--muted); }
+
+      @media (max-width: 1150px) { .app { grid-template-columns: 1fr; } .stage-wrap { min-height: 420px; } }
     </style>
   </head>
   <body>
@@ -85,35 +94,30 @@
       <section class="panel stack">
         <div>
           <h1>TapApp Studio</h1>
-          <p class="small">より直感的にするため、ドラッグ並び替え・ダブルタップ編集・複製・上下移動に対応しました。</p>
+          <p class="small">Lovable風に近づけるため、自由配置キャンバス（ドラッグ移動・リサイズ・タップ選択・ダブルタップ編集）にしました。</p>
         </div>
 
         <div class="stack">
-          <h2>1) AIで下書きを作る</h2>
-          <label class="small">使うAI</label>
+          <h2>1) AIで下書き</h2>
+          <label class="small">Provider</label>
           <select id="provider">
             <option value="openai">OpenAI API</option>
             <option value="hf">Hugging Face Inference API</option>
           </select>
-
-          <label class="small">API Key（ブラウザ保存）</label>
+          <label class="small">API Key</label>
           <input id="apiKey" type="password" placeholder="sk-... / hf_..." />
-
           <label class="small">モデル名</label>
-          <input id="model" placeholder="例: gpt-4o-mini / Qwen/Qwen2.5-Coder-32B-Instruct" />
-
-          <label class="small">作りたいアプリ内容</label>
-          <textarea id="prompt" placeholder="例: 家計簿アプリ。上に月次サマリー、下に履歴一覧、右下に追加"></textarea>
-
-          <button id="generateBtn" class="primary">AIでUI構成を生成</button>
+          <input id="model" placeholder="gpt-4o-mini / Qwen/Qwen2.5-Coder-32B-Instruct" />
+          <label class="small">作りたいアプリの要件</label>
+          <textarea id="prompt" placeholder="例: 予約アプリ。上に検索、中央にカード一覧、下に予約ボタン"></textarea>
+          <button id="generateBtn" class="primary">AIで初期レイアウト生成</button>
           <div id="aiStatus" class="status"></div>
-          <p class="small">失敗時はテンプレートに自動フォールバックします。</p>
         </div>
       </section>
 
       <section class="panel builder">
         <div>
-          <h2>2) タップ&ドラッグで組み立てる</h2>
+          <h2>2) タップで配置（自由編集）</h2>
           <div class="toolbar">
             <button data-add="heading">見出し</button>
             <button data-add="text">テキスト</button>
@@ -123,25 +127,27 @@
           </div>
         </div>
 
-        <div class="quick-row stack">
-          <div class="small">選択中に対してクイック操作</div>
-          <div class="grid-3">
-            <button id="moveUpBtn">↑ 上へ</button>
-            <button id="moveDownBtn">↓ 下へ</button>
-            <button id="duplicateBtn">複製</button>
+        <div class="quick stack">
+          <div class="small">クイック操作</div>
+          <div class="grid3">
+            <button id="dupBtn">複製</button>
+            <button id="frontBtn">前面へ</button>
+            <button id="backBtn">背面へ</button>
           </div>
         </div>
 
-        <div id="canvas" class="canvas"></div>
+        <div class="stage-wrap">
+          <div id="phone" class="phone"></div>
+        </div>
 
-        <div class="footer stack">
-          <div class="grid-2">
-            <button id="saveBtn">作業を保存</button>
-            <button id="loadBtn">続きから再開</button>
+        <div class="stack">
+          <div class="grid2">
+            <button id="saveBtn">保存</button>
+            <button id="loadBtn">再開</button>
           </div>
-          <div class="grid-2">
+          <div class="grid2">
             <button id="exportBtn">JSONエクスポート</button>
-            <button id="deployGuideBtn">Vercelデプロイ手順</button>
+            <button id="deployBtn">Vercelデプロイ手順</button>
           </div>
           <div id="saveStatus" class="status"></div>
         </div>
@@ -149,256 +155,309 @@
 
       <section class="panel stack">
         <div>
-          <h2>3) 選択中の要素を編集</h2>
-          <p class="small">キャンバス上でダブルタップ（PCはダブルクリック）でも文字を直接編集できます。</p>
+          <h2>3) 選択中の詳細編集</h2>
+          <p class="small">要素をタップ選択。ダブルクリック（スマホならダブルタップ）で直接文字編集もできます。</p>
         </div>
-
-        <label class="small">内容テキスト</label>
-        <input id="propText" placeholder="テキスト" />
-
-        <label class="small">背景色</label>
-        <input id="propBg" type="color" value="#ffffff" />
-
-        <label class="small">文字色</label>
-        <input id="propColor" type="color" value="#18212f" />
-
-        <label class="small">角丸(px)</label>
-        <input id="propRadius" type="range" min="0" max="40" value="10" />
-
-        <label class="small">余白(px)</label>
-        <input id="propPadding" type="range" min="4" max="36" value="10" />
-
-        <label class="small">文字サイズ(px)</label>
-        <input id="propFontSize" type="range" min="12" max="36" value="16" />
-
-        <div class="grid-2">
-          <button id="applyBtn" class="primary">変更を適用</button>
-          <button id="deleteBtn">要素を削除</button>
+        <label class="small">テキスト</label>
+        <input id="propText" />
+        <div class="grid2">
+          <div><label class="small">背景色</label><input id="propBg" type="color" value="#ffffff" /></div>
+          <div><label class="small">文字色</label><input id="propColor" type="color" value="#111827" /></div>
         </div>
-
+        <label class="small">角丸</label><input id="propRadius" type="range" min="0" max="40" value="10" />
+        <label class="small">余白</label><input id="propPadding" type="range" min="4" max="36" value="10" />
+        <label class="small">文字サイズ</label><input id="propFont" type="range" min="12" max="36" value="16" />
+        <div class="grid2">
+          <div><label class="small">幅(px)</label><input id="propW" type="number" min="40" /></div>
+          <div><label class="small">高さ(px)</label><input id="propH" type="number" min="32" /></div>
+        </div>
+        <div class="grid2">
+          <div><label class="small">X(px)</label><input id="propX" type="number" min="0" /></div>
+          <div><label class="small">Y(px)</label><input id="propY" type="number" min="0" /></div>
+        </div>
+        <div class="grid2">
+          <button id="applyBtn" class="primary">適用</button>
+          <button id="deleteBtn">削除</button>
+        </div>
         <div id="editStatus" class="status"></div>
       </section>
     </main>
 
     <script>
-      const defaultState = {
-        elements: [
-          { id: crypto.randomUUID(), type: "heading", text: "ようこそ", style: { bg: "#ffffff", color: "#18212f", radius: 10, padding: 10, fontSize: 22 } },
-          { id: crypto.randomUUID(), type: "text", text: "左からAI生成、中央で直感編集、右で微調整できます。", style: { bg: "#ffffff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } }
-        ]
+      const phoneSize = { w: 390, h: 844 };
+      const types = ["heading", "text", "button", "input", "card"];
+      const defaultsByType = {
+        heading: { text: "見出し", w: 260, h: 58, fontSize: 24 },
+        text: { text: "テキスト", w: 260, h: 50, fontSize: 16 },
+        button: { text: "アクション", w: 180, h: 48, fontSize: 16, bg: "#2563eb", color: "#ffffff" },
+        input: { text: "入力してください", w: 250, h: 46, fontSize: 15, bg: "#f8fafc" },
+        card: { text: "カード", w: 280, h: 120, fontSize: 16, bg: "#ffffff" }
       };
 
-      let state = JSON.parse(localStorage.getItem("tapapp-state") || "null") || defaultState;
-      let selectedId = state.elements[0]?.id ?? null;
-      let draggingId = null;
-
       const ui = {
-        canvas: document.getElementById("canvas"),
+        phone: document.getElementById("phone"),
         addButtons: [...document.querySelectorAll("[data-add]")],
-        propText: document.getElementById("propText"),
-        propBg: document.getElementById("propBg"),
-        propColor: document.getElementById("propColor"),
-        propRadius: document.getElementById("propRadius"),
-        propPadding: document.getElementById("propPadding"),
-        propFontSize: document.getElementById("propFontSize"),
-        applyBtn: document.getElementById("applyBtn"),
-        deleteBtn: document.getElementById("deleteBtn"),
-        moveUpBtn: document.getElementById("moveUpBtn"),
-        moveDownBtn: document.getElementById("moveDownBtn"),
-        duplicateBtn: document.getElementById("duplicateBtn"),
-        editStatus: document.getElementById("editStatus"),
-        saveBtn: document.getElementById("saveBtn"),
-        loadBtn: document.getElementById("loadBtn"),
-        exportBtn: document.getElementById("exportBtn"),
-        deployGuideBtn: document.getElementById("deployGuideBtn"),
-        saveStatus: document.getElementById("saveStatus"),
         provider: document.getElementById("provider"),
         apiKey: document.getElementById("apiKey"),
         model: document.getElementById("model"),
         prompt: document.getElementById("prompt"),
         generateBtn: document.getElementById("generateBtn"),
-        aiStatus: document.getElementById("aiStatus")
+        aiStatus: document.getElementById("aiStatus"),
+        propText: document.getElementById("propText"),
+        propBg: document.getElementById("propBg"),
+        propColor: document.getElementById("propColor"),
+        propRadius: document.getElementById("propRadius"),
+        propPadding: document.getElementById("propPadding"),
+        propFont: document.getElementById("propFont"),
+        propW: document.getElementById("propW"),
+        propH: document.getElementById("propH"),
+        propX: document.getElementById("propX"),
+        propY: document.getElementById("propY"),
+        applyBtn: document.getElementById("applyBtn"),
+        deleteBtn: document.getElementById("deleteBtn"),
+        dupBtn: document.getElementById("dupBtn"),
+        frontBtn: document.getElementById("frontBtn"),
+        backBtn: document.getElementById("backBtn"),
+        saveBtn: document.getElementById("saveBtn"),
+        loadBtn: document.getElementById("loadBtn"),
+        exportBtn: document.getElementById("exportBtn"),
+        deployBtn: document.getElementById("deployBtn"),
+        saveStatus: document.getElementById("saveStatus"),
+        editStatus: document.getElementById("editStatus")
       };
 
-      const allowedTypes = ["heading", "text", "button", "input", "card"];
-      const getById = (id) => state.elements.find((e) => e.id === id);
-      const selected = () => getById(selectedId);
-
-      function normalizeStyle(style = {}, type = "text") {
-        const defaults = { heading: 22, text: 16, button: 16, input: 16, card: 16 };
+      function newNode(type, x = 30, y = 30) {
+        const d = defaultsByType[type] || defaultsByType.text;
         return {
-          bg: style.bg || "#ffffff",
-          color: style.color || "#18212f",
-          radius: Number(style.radius ?? 10),
-          padding: Number(style.padding ?? 10),
-          fontSize: Number(style.fontSize ?? defaults[type] ?? 16)
-        };
-      }
-
-      function elementTag(type) {
-        if (type === "heading") return "h3";
-        if (type === "button") return "button";
-        if (type === "input") return "input";
-        return "div";
-      }
-
-      function markStatus(msg) { ui.editStatus.textContent = msg; }
-
-      function render() {
-        ui.canvas.innerHTML = "";
-        state.elements.forEach((item) => {
-          item.style = normalizeStyle(item.style, item.type);
-          const wrap = document.createElement("div");
-          wrap.className = `element ${item.id === selectedId ? "selected" : ""}`;
-          wrap.draggable = true;
-          wrap.dataset.id = item.id;
-          wrap.style.background = item.style.bg;
-          wrap.style.color = item.style.color;
-          wrap.style.borderRadius = `${item.style.radius}px`;
-          wrap.style.padding = `${item.style.padding}px`;
-          wrap.style.fontSize = `${item.style.fontSize}px`;
-
-          const handle = document.createElement("span");
-          handle.className = "drag-handle";
-          handle.textContent = "↕ 並び替え";
-          wrap.appendChild(handle);
-
-          const tag = elementTag(item.type);
-          const node = document.createElement(tag);
-          node.className = "element-content";
-          if (item.type === "input") {
-            node.value = item.text;
-            node.placeholder = item.text;
-            node.readOnly = true;
-          } else {
-            node.textContent = item.text;
-          }
-
-          wrap.onclick = () => {
-            selectedId = item.id;
-            syncEditor();
-            render();
-          };
-
-          wrap.ondblclick = () => enableInlineEdit(item.id, node);
-
-          wrap.ondragstart = (e) => {
-            draggingId = item.id;
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", item.id);
-            wrap.classList.add("dragging");
-          };
-          wrap.ondragend = () => {
-            draggingId = null;
-            wrap.classList.remove("dragging");
-            [...ui.canvas.querySelectorAll(".drop-target")].forEach((n) => n.classList.remove("drop-target"));
-          };
-          wrap.ondragover = (e) => {
-            e.preventDefault();
-            if (draggingId && draggingId !== item.id) wrap.classList.add("drop-target");
-          };
-          wrap.ondragleave = () => wrap.classList.remove("drop-target");
-          wrap.ondrop = (e) => {
-            e.preventDefault();
-            reorder(draggingId, item.id);
-          };
-
-          wrap.appendChild(node);
-          ui.canvas.appendChild(wrap);
-        });
-        syncEditor();
-      }
-
-      function enableInlineEdit(id, node) {
-        const item = getById(id);
-        if (!item || item.type === "input") return;
-        node.contentEditable = "true";
-        node.focus();
-        document.execCommand("selectAll", false, null);
-        markStatus("インライン編集モード: Enter または外側タップで確定");
-        const done = () => {
-          node.contentEditable = "false";
-          item.text = node.textContent.trim() || "（空）";
-          ui.propText.value = item.text;
-          markStatus("インライン編集を反映しました。");
-        };
-        node.onblur = done;
-        node.onkeydown = (ev) => {
-          if (ev.key === "Enter") {
-            ev.preventDefault();
-            node.blur();
-          }
-        };
-      }
-
-      function syncEditor() {
-        const s = selected();
-        const disabled = !s;
-        [ui.propText, ui.propBg, ui.propColor, ui.propRadius, ui.propPadding, ui.propFontSize, ui.applyBtn, ui.deleteBtn, ui.moveUpBtn, ui.moveDownBtn, ui.duplicateBtn].forEach((n) => n.disabled = disabled);
-        if (!s) return;
-        ui.propText.value = s.text;
-        ui.propBg.value = s.style.bg;
-        ui.propColor.value = s.style.color;
-        ui.propRadius.value = s.style.radius;
-        ui.propPadding.value = s.style.padding;
-        ui.propFontSize.value = s.style.fontSize;
-      }
-
-      function addElement(type) {
-        const map = {
-          heading: "新しい見出し",
-          text: "新しいテキスト",
-          button: "アクション",
-          input: "入力してください",
-          card: "カードコンテンツ"
-        };
-        const next = {
           id: crypto.randomUUID(),
           type,
-          text: map[type],
-          style: normalizeStyle({}, type)
+          text: d.text,
+          x, y,
+          w: d.w,
+          h: d.h,
+          z: Date.now(),
+          style: {
+            bg: d.bg || "#ffffff",
+            color: d.color || "#111827",
+            radius: 10,
+            padding: 10,
+            fontSize: d.fontSize || 16
+          }
         };
-        state.elements.push(next);
-        selectedId = next.id;
-        markStatus("要素を追加しました。ドラッグで並び替えできます。");
-        render();
       }
 
-      function reorder(sourceId, targetId) {
-        if (!sourceId || !targetId || sourceId === targetId) return;
-        const list = state.elements;
-        const from = list.findIndex((e) => e.id === sourceId);
-        const to = list.findIndex((e) => e.id === targetId);
-        if (from < 0 || to < 0) return;
-        const [moved] = list.splice(from, 1);
-        list.splice(to, 0, moved);
-        selectedId = moved.id;
-        markStatus("並び順を変更しました。");
-        render();
+      let state = JSON.parse(localStorage.getItem("tapapp-state") || "null") || {
+        nodes: [newNode("heading", 24, 32), newNode("text", 24, 104), newNode("button", 24, 170)]
+      };
+      let selectedId = state.nodes[0]?.id || null;
+
+      const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+      const selected = () => state.nodes.find((n) => n.id === selectedId);
+      const status = (msg) => (ui.editStatus.textContent = msg);
+
+      function normalizeNode(n) {
+        n.type = types.includes(n.type) ? n.type : "text";
+        n.text = String(n.text || "要素");
+        n.w = clamp(Number(n.w || 120), 40, phoneSize.w);
+        n.h = clamp(Number(n.h || 40), 32, phoneSize.h);
+        n.x = clamp(Number(n.x || 0), 0, phoneSize.w - n.w);
+        n.y = clamp(Number(n.y || 0), 0, phoneSize.h - n.h);
+        n.z = Number(n.z || Date.now());
+        n.style = n.style || {};
+        n.style.bg = n.style.bg || "#ffffff";
+        n.style.color = n.style.color || "#111827";
+        n.style.radius = clamp(Number(n.style.radius ?? 10), 0, 40);
+        n.style.padding = clamp(Number(n.style.padding ?? 10), 4, 36);
+        n.style.fontSize = clamp(Number(n.style.fontSize ?? 16), 12, 36);
+        return n;
       }
 
-      function moveSelected(offset) {
-        const i = state.elements.findIndex((e) => e.id === selectedId);
-        const j = i + offset;
-        if (i < 0 || j < 0 || j >= state.elements.length) return;
-        [state.elements[i], state.elements[j]] = [state.elements[j], state.elements[i]];
-        markStatus("順序を移動しました。");
-        render();
+      function snap(value, grid = 4) { return Math.round(value / grid) * grid; }
+
+      function render() {
+        state.nodes = state.nodes.map(normalizeNode).sort((a, b) => a.z - b.z);
+        ui.phone.innerHTML = "";
+
+        state.nodes.forEach((n) => {
+          const box = document.createElement("div");
+          box.className = `node ${n.id === selectedId ? "selected" : ""}`;
+          box.dataset.id = n.id;
+          box.style.left = `${n.x}px`;
+          box.style.top = `${n.y}px`;
+          box.style.width = `${n.w}px`;
+          box.style.height = `${n.h}px`;
+          box.style.background = n.style.bg;
+          box.style.color = n.style.color;
+          box.style.borderRadius = `${n.style.radius}px`;
+          box.style.padding = `${n.style.padding}px`;
+          box.style.fontSize = `${n.style.fontSize}px`;
+          box.style.zIndex = `${n.z}`;
+
+          const hint = document.createElement("span");
+          hint.className = "hint";
+          hint.textContent = n.type;
+          box.appendChild(hint);
+
+          const content = document.createElement(n.type === "heading" ? "h3" : n.type === "button" ? "button" : n.type === "input" ? "input" : "div");
+          content.className = "content";
+          if (n.type === "input") {
+            content.value = n.text;
+            content.readOnly = true;
+          } else {
+            content.textContent = n.text;
+          }
+          box.appendChild(content);
+
+          const resize = document.createElement("span");
+          resize.className = "resize";
+          box.appendChild(resize);
+
+          box.addEventListener("pointerdown", (e) => startDrag(e, n.id));
+          resize.addEventListener("pointerdown", (e) => startResize(e, n.id));
+          box.addEventListener("dblclick", () => inlineEdit(n.id, content));
+          box.addEventListener("click", () => {
+            selectedId = n.id;
+            syncProps();
+            render();
+          });
+
+          ui.phone.appendChild(box);
+        });
+
+        syncProps();
       }
 
-      function duplicateSelected() {
-        const s = selected();
-        if (!s) return;
-        const copy = {
-          id: crypto.randomUUID(),
-          type: s.type,
-          text: `${s.text} (コピー)`,
-          style: { ...s.style }
+      function inlineEdit(id, contentEl) {
+        const n = state.nodes.find((x) => x.id === id);
+        if (!n || n.type === "input") return;
+        contentEl.contentEditable = "true";
+        contentEl.focus();
+        status("直接編集: Enterまたは外側タップで確定");
+        const commit = () => {
+          contentEl.contentEditable = "false";
+          n.text = contentEl.textContent.trim() || "（空）";
+          ui.propText.value = n.text;
+          status("テキストを反映しました。");
         };
-        const idx = state.elements.findIndex((e) => e.id === s.id);
-        state.elements.splice(idx + 1, 0, copy);
-        selectedId = copy.id;
-        markStatus("要素を複製しました。");
+        contentEl.onblur = commit;
+        contentEl.onkeydown = (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            contentEl.blur();
+          }
+        };
+      }
+
+      function startDrag(e, id) {
+        if (e.target.classList.contains("resize")) return;
+        const n = state.nodes.find((x) => x.id === id);
+        if (!n) return;
+        selectedId = id;
+        const rect = ui.phone.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const ox = n.x;
+        const oy = n.y;
+
+        const move = (ev) => {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          n.x = clamp(snap(ox + dx), 0, phoneSize.w - n.w);
+          n.y = clamp(snap(oy + dy), 0, phoneSize.h - n.h);
+          render();
+        };
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          status("移動しました。");
+        };
+
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      }
+
+      function startResize(e, id) {
+        e.stopPropagation();
+        const n = state.nodes.find((x) => x.id === id);
+        if (!n) return;
+        selectedId = id;
+        const sx = e.clientX;
+        const sy = e.clientY;
+        const ow = n.w;
+        const oh = n.h;
+
+        const move = (ev) => {
+          const dw = ev.clientX - sx;
+          const dh = ev.clientY - sy;
+          n.w = clamp(snap(ow + dw), 40, phoneSize.w - n.x);
+          n.h = clamp(snap(oh + dh), 32, phoneSize.h - n.y);
+          render();
+        };
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          status("サイズを変更しました。");
+        };
+
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      }
+
+      function syncProps() {
+        const n = selected();
+        const disabled = !n;
+        [ui.propText, ui.propBg, ui.propColor, ui.propRadius, ui.propPadding, ui.propFont, ui.propW, ui.propH, ui.propX, ui.propY, ui.applyBtn, ui.deleteBtn, ui.dupBtn, ui.frontBtn, ui.backBtn].forEach((x) => (x.disabled = disabled));
+        if (!n) return;
+        ui.propText.value = n.text;
+        ui.propBg.value = n.style.bg;
+        ui.propColor.value = n.style.color;
+        ui.propRadius.value = n.style.radius;
+        ui.propPadding.value = n.style.padding;
+        ui.propFont.value = n.style.fontSize;
+        ui.propW.value = n.w;
+        ui.propH.value = n.h;
+        ui.propX.value = n.x;
+        ui.propY.value = n.y;
+      }
+
+      function addNode(type) {
+        const offset = state.nodes.length * 12;
+        const n = newNode(type, clamp(24 + offset, 0, 260), clamp(28 + offset, 0, 600));
+        n.z = Date.now();
+        state.nodes.push(n);
+        selectedId = n.id;
+        status("要素を追加しました。ドラッグして好きな位置へ配置できます。");
+        render();
+      }
+
+      function duplicateNode() {
+        const n = selected();
+        if (!n) return;
+        const cp = JSON.parse(JSON.stringify(n));
+        cp.id = crypto.randomUUID();
+        cp.x = clamp(n.x + 16, 0, phoneSize.w - n.w);
+        cp.y = clamp(n.y + 16, 0, phoneSize.h - n.h);
+        cp.z = Date.now();
+        cp.text = `${n.text} コピー`;
+        state.nodes.push(cp);
+        selectedId = cp.id;
+        status("複製しました。");
+        render();
+      }
+
+      function bringFront() {
+        const n = selected();
+        if (!n) return;
+        n.z = Math.max(...state.nodes.map((x) => x.z)) + 1;
+        status("前面に移動しました。");
+        render();
+      }
+
+      function sendBack() {
+        const n = selected();
+        if (!n) return;
+        n.z = Math.min(...state.nodes.map((x) => x.z)) - 1;
+        status("背面に移動しました。");
         render();
       }
 
@@ -411,101 +470,105 @@
       }
 
       function loadState() {
-        const loaded = JSON.parse(localStorage.getItem("tapapp-state") || "null");
-        if (!loaded?.elements?.length) {
+        const d = JSON.parse(localStorage.getItem("tapapp-state") || "null");
+        if (!d?.nodes?.length) {
           ui.saveStatus.textContent = "保存データがありません。";
           return;
         }
-        state = loaded;
-        state.elements = state.elements.map((e) => ({ ...e, style: normalizeStyle(e.style, e.type) }));
-        selectedId = state.elements[0].id;
+        state = d;
+        selectedId = state.nodes[0].id;
         render();
-        ui.saveStatus.textContent = "保存データを読み込みました。";
+        ui.saveStatus.textContent = "再開しました。";
       }
 
       function extractJson(text) {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (!match) return null;
-        try { return JSON.parse(match[0]); } catch { return null; }
+        const m = text.match(/\{[\s\S]*\}/);
+        if (!m) return null;
+        try { return JSON.parse(m[0]); } catch { return null; }
       }
 
       async function callOpenAI({ key, model, prompt }) {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
           body: JSON.stringify({
             model: model || "gpt-4o-mini",
             messages: [
-              { role: "system", content: "ノーコードUI設計アシスタント。JSONのみ返す。{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"radius\":10,\"padding\":10,\"fontSize\":16}}]}" },
+              { role: "system", content: "ノーコードアプリ設計アシスタント。JSONのみで返す。形式:{\"elements\":[{\"type\":\"heading|text|button|input|card\",\"text\":\"...\",\"x\":20,\"y\":20,\"w\":220,\"h\":48,\"style\":{\"bg\":\"#ffffff\",\"color\":\"#111827\",\"radius\":10,\"padding\":10,\"fontSize\":16}}]}" },
               { role: "user", content: prompt }
             ],
             temperature: 0.7
           })
         });
-        if (!response.ok) throw new Error(`OpenAI API error ${response.status}`);
-        const data = await response.json();
+        if (!res.ok) throw new Error(`OpenAI API error ${res.status}`);
+        const data = await res.json();
         return data.choices?.[0]?.message?.content || "";
       }
 
       async function callHF({ key, model, prompt }) {
-        const response = await fetch(`https://api-inference.huggingface.co/models/${model || "Qwen/Qwen2.5-Coder-32B-Instruct"}`, {
+        const res = await fetch(`https://api-inference.huggingface.co/models/${model || "Qwen/Qwen2.5-Coder-32B-Instruct"}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
           body: JSON.stringify({
-            inputs: `JSONのみで返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","style":{"bg":"#ffffff","color":"#111827","radius":10,"padding":10,"fontSize":16}}]} 要件:${prompt}`,
-            parameters: { max_new_tokens: 550, temperature: 0.4 }
+            inputs: `JSONのみ返答。形式:{"elements":[{"type":"heading|text|button|input|card","text":"...","x":20,"y":20,"w":220,"h":48,"style":{"bg":"#ffffff","color":"#111827","radius":10,"padding":10,"fontSize":16}}]} 要件:${prompt}`,
+            parameters: { max_new_tokens: 600, temperature: 0.4 }
           })
         });
-        if (!response.ok) throw new Error(`HF API error ${response.status}`);
-        const data = await response.json();
+        if (!res.ok) throw new Error(`HF API error ${res.status}`);
+        const data = await res.json();
         if (Array.isArray(data)) return data[0]?.generated_text || "";
         return data.generated_text || JSON.stringify(data);
       }
 
       function applyGenerated(parsed) {
         if (!parsed?.elements?.length) throw new Error("Invalid schema");
-        state.elements = parsed.elements.slice(0, 30).map((e) => {
-          const type = allowedTypes.includes(e.type) ? e.type : "text";
-          return {
-            id: crypto.randomUUID(),
-            type,
-            text: String(e.text || "新しい要素"),
-            style: normalizeStyle(e.style, type)
-          };
-        });
-        selectedId = state.elements[0]?.id || null;
+        state.nodes = parsed.elements.slice(0, 30).map((e, i) => normalizeNode({
+          id: crypto.randomUUID(),
+          type: types.includes(e.type) ? e.type : "text",
+          text: e.text || "要素",
+          x: e.x ?? 24,
+          y: e.y ?? (28 + i * 54),
+          w: e.w ?? 220,
+          h: e.h ?? 48,
+          z: Date.now() + i,
+          style: e.style || {}
+        }));
+        selectedId = state.nodes[0]?.id || null;
         render();
       }
 
-      ui.addButtons.forEach((btn) => { btn.onclick = () => addElement(btn.dataset.add); });
+      ui.addButtons.forEach((btn) => (btn.onclick = () => addNode(btn.dataset.add)));
 
       ui.applyBtn.onclick = () => {
-        const s = selected();
-        if (!s) return;
-        s.text = ui.propText.value || "（空）";
-        s.style.bg = ui.propBg.value;
-        s.style.color = ui.propColor.value;
-        s.style.radius = Number(ui.propRadius.value);
-        s.style.padding = Number(ui.propPadding.value);
-        s.style.fontSize = Number(ui.propFontSize.value);
-        markStatus("変更を反映しました。");
+        const n = selected();
+        if (!n) return;
+        n.text = ui.propText.value || "（空）";
+        n.style.bg = ui.propBg.value;
+        n.style.color = ui.propColor.value;
+        n.style.radius = Number(ui.propRadius.value);
+        n.style.padding = Number(ui.propPadding.value);
+        n.style.fontSize = Number(ui.propFont.value);
+        n.w = clamp(Number(ui.propW.value), 40, phoneSize.w - n.x);
+        n.h = clamp(Number(ui.propH.value), 32, phoneSize.h - n.y);
+        n.x = clamp(Number(ui.propX.value), 0, phoneSize.w - n.w);
+        n.y = clamp(Number(ui.propY.value), 0, phoneSize.h - n.h);
+        status("プロパティを反映しました。");
         render();
       };
 
       ui.deleteBtn.onclick = () => {
         if (!selectedId) return;
-        state.elements = state.elements.filter((e) => e.id !== selectedId);
-        selectedId = state.elements[0]?.id || null;
-        markStatus("要素を削除しました。");
+        state.nodes = state.nodes.filter((n) => n.id !== selectedId);
+        selectedId = state.nodes[0]?.id || null;
+        status("削除しました。");
         render();
       };
 
-      ui.moveUpBtn.onclick = () => moveSelected(-1);
-      ui.moveDownBtn.onclick = () => moveSelected(1);
-      ui.duplicateBtn.onclick = () => duplicateSelected();
-
+      ui.dupBtn.onclick = duplicateNode;
+      ui.frontBtn.onclick = bringFront;
+      ui.backBtn.onclick = sendBack;
       ui.saveBtn.onclick = () => saveState();
-      ui.loadBtn.onclick = () => loadState();
+      ui.loadBtn.onclick = loadState;
       ui.exportBtn.onclick = () => {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -516,9 +579,8 @@
         URL.revokeObjectURL(url);
         ui.saveStatus.textContent = "JSONをエクスポートしました。";
       };
-
-      ui.deployGuideBtn.onclick = () => {
-        alert("Vercelデプロイ手順:\n1. このフォルダをGitHubにpush\n2. vercel.comでNew Project\n3. リポジトリを選択\n4. Preset: Other\n5. Deploy\n\n本番ではAPIキーをクライアントに置かず、Vercel Functions経由にしてください。");
+      ui.deployBtn.onclick = () => {
+        alert("Vercel手順:\n1) GitHubへpush\n2) vercel.com > New Project\n3) リポジトリ選択\n4) Preset: Other\n5) Deploy\n\nAPIキーは本番でクライアントに置かず、Vercel Functions経由で呼び出してください。");
       };
 
       ui.generateBtn.onclick = async () => {
@@ -531,35 +593,35 @@
         ui.generateBtn.disabled = true;
         ui.aiStatus.textContent = "AIで生成中...";
         try {
-          const provider = ui.provider.value;
-          const model = ui.model.value.trim();
-          const raw = provider === "openai"
-            ? await callOpenAI({ key, model, prompt })
-            : await callHF({ key, model, prompt });
+          const raw = ui.provider.value === "openai"
+            ? await callOpenAI({ key, model: ui.model.value.trim(), prompt })
+            : await callHF({ key, model: ui.model.value.trim(), prompt });
           const parsed = extractJson(raw);
           if (!parsed) throw new Error("JSON parse failed");
           applyGenerated(parsed);
-          ui.aiStatus.textContent = "AI構成を適用しました。中央キャンバスで直感的に調整できます。";
-        } catch (error) {
-          console.error(error);
+          ui.aiStatus.textContent = "AIレイアウトを反映しました。タップで自由に調整できます。";
+        } catch (err) {
+          console.error(err);
           applyGenerated({
             elements: [
-              { type: "heading", text: "テンプレート", style: { bg: "#fff7ed", color: "#9a3412", radius: 12, padding: 12, fontSize: 22 } },
-              { type: "text", text: prompt, style: { bg: "#ffffff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } },
-              { type: "button", text: "開始", style: { bg: "#3b82f6", color: "#ffffff", radius: 10, padding: 10, fontSize: 16 } }
+              { type: "heading", text: "テンプレート", x: 24, y: 28, w: 250, h: 56, style: { bg: "#fff7ed", color: "#9a3412", radius: 12, padding: 10, fontSize: 22 } },
+              { type: "text", text: prompt, x: 24, y: 96, w: 320, h: 120, style: { bg: "#ffffff", color: "#334155", radius: 10, padding: 10, fontSize: 16 } },
+              { type: "button", text: "開始", x: 24, y: 230, w: 150, h: 48, style: { bg: "#2563eb", color: "#ffffff", radius: 10, padding: 10, fontSize: 16 } }
             ]
           });
-          ui.aiStatus.textContent = "AI応答を解析できずテンプレートを作成しました。";
+          ui.aiStatus.textContent = "AI解析失敗のためテンプレートを作成しました。";
         } finally {
           ui.generateBtn.disabled = false;
         }
       };
 
-      (function bootstrap() {
+      (function boot() {
         ui.apiKey.value = localStorage.getItem("tapapp-api-key") || "";
         ui.provider.value = localStorage.getItem("tapapp-provider") || "openai";
         ui.model.value = localStorage.getItem("tapapp-model") || "";
-        state.elements = state.elements.map((e) => ({ ...e, style: normalizeStyle(e.style, e.type) }));
+        state.nodes = (state.nodes || []).map(normalizeNode);
+        if (!state.nodes.length) state.nodes = [newNode("heading")];
+        selectedId = state.nodes[0].id;
         render();
       })();
     </script>
