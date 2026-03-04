@@ -91,6 +91,27 @@
       }
       .status { min-height: 1.1em; font-size:.84rem; color: var(--muted); }
 
+      .bubble-menu {
+        position: absolute;
+        display: grid;
+        grid-template-columns: repeat(4, auto);
+        gap: 6px;
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid #334155;
+        padding: 8px;
+        border-radius: 12px;
+        z-index: 50;
+      }
+      .bubble-menu button {
+        width: auto;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid #475569;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-size: 0.75rem;
+      }
+
       .preview-modal {
         position: fixed;
         inset: 0;
@@ -175,44 +196,12 @@
         </div>
 
         <div class="quick stack">
-          <div class="small">クイック操作</div>
+          <div class="small">要素をクリックすると、その周囲に操作ボタンが表示されます（複製/削除/重なり順/整列）。</div>
           <div class="grid3">
             <button id="undoBtn">Undo</button>
             <button id="redoBtn">Redo</button>
-            <button id="dupBtn">複製</button>
-          </div>
-          <div class="grid3">
-            <button id="frontBtn">前面へ</button>
-            <button id="backBtn">背面へ</button>
             <button id="previewBtn" class="primary">プレビュー</button>
           </div>
-          <div class="grid2">
-            <select id="placeType">
-              <option value="heading">見出し</option>
-              <option value="text">テキスト</option>
-              <option value="button">ボタン</option>
-              <option value="input">入力欄</option>
-              <option value="card">カード</option>
-            </select>
-            <button id="placeModeBtn">タップ配置モードOFF</button>
-          </div>
-          <div class="grid3">
-            <button id="alignLeftBtn">左揃え</button>
-            <button id="alignCenterBtn">中央揃え</button>
-            <button id="alignRightBtn">右揃え</button>
-          </div>
-          <div class="grid3">
-            <button id="alignTopBtn">上揃え</button>
-            <button id="alignMiddleBtn">中揃え</button>
-            <button id="alignBottomBtn">下揃え</button>
-          </div>
-          <div class="grid2">
-            <button id="distributeHBtn">横均等配置</button>
-            <button id="distributeVBtn">縦均等配置</button>
-          </div>
-        </div>
-
-        <div class="quick stack zoom-wrap">
           <div class="grid2">
             <button id="toggleGridBtn">グリッドON/OFF</button>
             <button id="toggleSnapBtn">吸着ON/OFF</button>
@@ -223,6 +212,7 @@
 
         <div class="stage-wrap">
           <div id="phone" class="phone show-grid"></div>
+          <div id="bubbleMenu" class="bubble-menu" hidden></div>
         </div>
 
         <div class="stack">
@@ -338,20 +328,8 @@
         deleteBtn: document.getElementById("deleteBtn"),
         undoBtn: document.getElementById("undoBtn"),
         redoBtn: document.getElementById("redoBtn"),
-        dupBtn: document.getElementById("dupBtn"),
-        frontBtn: document.getElementById("frontBtn"),
-        backBtn: document.getElementById("backBtn"),
         previewBtn: document.getElementById("previewBtn"),
-        placeType: document.getElementById("placeType"),
-        placeModeBtn: document.getElementById("placeModeBtn"),
-        alignLeftBtn: document.getElementById("alignLeftBtn"),
-        alignCenterBtn: document.getElementById("alignCenterBtn"),
-        alignRightBtn: document.getElementById("alignRightBtn"),
-        alignTopBtn: document.getElementById("alignTopBtn"),
-        alignMiddleBtn: document.getElementById("alignMiddleBtn"),
-        alignBottomBtn: document.getElementById("alignBottomBtn"),
-        distributeHBtn: document.getElementById("distributeHBtn"),
-        distributeVBtn: document.getElementById("distributeVBtn"),
+        bubbleMenu: document.getElementById("bubbleMenu"),
         toggleGridBtn: document.getElementById("toggleGridBtn"),
         toggleSnapBtn: document.getElementById("toggleSnapBtn"),
         zoomRange: document.getElementById("zoomRange"),
@@ -403,7 +381,7 @@
       let selectedId = state.nodes[0]?.id || null;
       let history = [];
       let future = [];
-      let placeMode = false;
+      let suppressInlineOnce = false;
 
       const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
       const selected = () => state.nodes.find((n) => n.id === selectedId);
@@ -411,9 +389,50 @@
       const canSnap = () => state.options.snap;
       const snap = (value, grid = 4) => canSnap() ? Math.round(value / grid) * grid : value;
 
-      function updatePlaceModeUI() {
-        ui.placeModeBtn.classList.toggle("active", placeMode);
-        ui.placeModeBtn.textContent = `タップ配置モード${placeMode ? "ON" : "OFF"}`;
+      const bubbleActions = [
+        ["複製", "duplicate"], ["削除", "delete"], ["前面", "front"], ["背面", "back"],
+        ["左", "left"], ["中X", "center"], ["右", "right"], ["上", "top"],
+        ["中Y", "middle"], ["下", "bottom"], ["横均等", "distx"], ["縦均等", "disty"]
+      ];
+
+      function setupBubbleMenu() {
+        ui.bubbleMenu.innerHTML = "";
+        bubbleActions.forEach(([label, action]) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.dataset.action = action;
+          b.onclick = () => runBubbleAction(action);
+          ui.bubbleMenu.appendChild(b);
+        });
+      }
+
+      function runBubbleAction(action) {
+        if (!selected()) return;
+        if (action === "duplicate") return duplicateNode();
+        if (action === "delete") return ui.deleteBtn.click();
+        if (action === "front") return bringFront();
+        if (action === "back") return sendBack();
+        if (action === "left") return alignAll("left");
+        if (action === "center") return alignAll("center");
+        if (action === "right") return alignAll("right");
+        if (action === "top") return alignAll("top");
+        if (action === "middle") return alignAll("middle");
+        if (action === "bottom") return alignAll("bottom");
+        if (action === "distx") return distribute("x");
+        if (action === "disty") return distribute("y");
+      }
+
+      function positionBubbleForNode(nodeId) {
+        const el = ui.phone.querySelector(`.node[data-id="${nodeId}"]`);
+        if (!el) { ui.bubbleMenu.hidden = true; return; }
+        ui.bubbleMenu.hidden = false;
+        const rect = el.getBoundingClientRect();
+        const parent = ui.phone.getBoundingClientRect();
+        const bx = Math.max(6, Math.min((rect.left - parent.left) + rect.width / 2 - 110, parent.width - 226));
+        const by = Math.max(6, (rect.top - parent.top) - 74);
+        ui.bubbleMenu.style.left = `${bx}px`;
+        ui.bubbleMenu.style.top = `${by}px`;
       }
 
       function snapshot() {
@@ -519,17 +538,19 @@
 
           box.addEventListener("pointerdown", (e) => startDrag(e, n.id));
           resize.addEventListener("pointerdown", (e) => startResize(e, n.id));
-          box.addEventListener("dblclick", () => inlineEdit(n.id, content));
           box.addEventListener("click", () => {
             selectedId = n.id;
             syncProps();
             render();
+            if (suppressInlineOnce) { suppressInlineOnce = false; return; }
+            inlineEdit(n.id, content);
           });
 
           ui.phone.appendChild(box);
         });
 
         syncProps();
+        if (selectedId) positionBubbleForNode(selectedId); else ui.bubbleMenu.hidden = true;
         renderPreviewScreens();
       }
 
@@ -608,6 +629,7 @@
         const up = () => {
           window.removeEventListener("pointermove", move);
           window.removeEventListener("pointerup", up);
+          if (Math.abs(n.x - ox) > 1 || Math.abs(n.y - oy) > 1) suppressInlineOnce = true;
           status("移動しました。");
         };
 
@@ -651,7 +673,7 @@
           ui.propText, ui.propBg, ui.propColor, ui.propBorderColor, ui.propBorderWidth,
           ui.propRadius, ui.propPadding, ui.propFont, ui.propOpacity, ui.propRotate,
           ui.propW, ui.propH, ui.propX, ui.propY,
-          ui.applyBtn, ui.deleteBtn, ui.dupBtn, ui.frontBtn, ui.backBtn
+          ui.applyBtn, ui.deleteBtn
         ].forEach((x) => (x.disabled = disabled));
         if (!n) return;
         ui.propText.value = n.text;
@@ -849,18 +871,6 @@
         if (e.key === "ArrowDown") n.y = clamp(n.y + step, 0, baseSize.h - n.h);
         render();
       }
-
-      ui.phone.onclick = (e) => {
-        if (!placeMode || e.target !== ui.phone) return;
-        const rect = ui.phone.getBoundingClientRect();
-        const scale = state.options.zoom / 100;
-        const type = ui.placeType.value;
-        const d = defaultsByType[type] || defaultsByType.text;
-        const x = clamp(snap((e.clientX - rect.left) / scale - d.w / 2), 0, baseSize.w - d.w);
-        const y = clamp(snap((e.clientY - rect.top) / scale - d.h / 2), 0, baseSize.h - d.h);
-        addNode(type, x, y);
-      };
-
       ui.addButtons.forEach((btn) => (btn.onclick = () => addNode(btn.dataset.add)));
 
       ui.applyBtn.onclick = () => {
@@ -896,22 +906,6 @@
 
       ui.undoBtn.onclick = undo;
       ui.redoBtn.onclick = redo;
-      ui.dupBtn.onclick = duplicateNode;
-      ui.frontBtn.onclick = bringFront;
-      ui.backBtn.onclick = sendBack;
-      ui.placeModeBtn.onclick = () => {
-        placeMode = !placeMode;
-        updatePlaceModeUI();
-        status(`タップ配置モード: ${placeMode ? "ON" : "OFF"}`);
-      };
-      ui.alignLeftBtn.onclick = () => alignAll("left");
-      ui.alignCenterBtn.onclick = () => alignAll("center");
-      ui.alignRightBtn.onclick = () => alignAll("right");
-      ui.alignTopBtn.onclick = () => alignAll("top");
-      ui.alignMiddleBtn.onclick = () => alignAll("middle");
-      ui.alignBottomBtn.onclick = () => alignAll("bottom");
-      ui.distributeHBtn.onclick = () => distribute("x");
-      ui.distributeVBtn.onclick = () => distribute("y");
       ui.previewBtn.onclick = () => {
         renderPreviewScreens();
         ui.previewModal.classList.add("open");
@@ -996,7 +990,7 @@
         state.options.showGrid = state.options.showGrid ?? true;
         state.options.snap = state.options.snap ?? true;
         state.options.zoom = clamp(Number(state.options.zoom || 100), 50, 140);
-        updatePlaceModeUI();
+        setupBubbleMenu();
         render();
       })();
     </script>
