@@ -15,6 +15,7 @@ TapApp Studio は、**コードを書かずにタップ操作中心でUIプロ�
 - [利用規約](#利用規約)
 - [免責事項](#免責事項)
 - [セキュリティ上の注意](#セキュリティ上の注意)
+- [MCP サーバーURLとドメイン検証](#mcp-サーバーurlとドメイン検証)
 - [デプロイ方法（Vercel）](#デプロイ方法vercel)
 - [ライセンス](#ライセンス)
 
@@ -184,6 +185,40 @@ python scripts/record_demo_playwright.py
 - `tapapp-demo-android.webm`
 
 > iOS / Android は実機ではなく、ブラウザのモバイルエミュレーション設定で録画します。
+
+---
+
+## MCP サーバーURLとドメイン検証
+
+### MCP サーバーURL
+
+本プロジェクトで利用する MCP サーバーURLは、運用環境に応じて設定してください。
+
+- 推奨形式: `http(s)://<your-mcp-domain>/mcp`
+- 例: `http://example.com/mcp`（ドキュメント用サンプル）
+
+> 実運用では、MCP専用ドメイン（例: `mcp.your-domain.com`）を用意することを推奨します。
+
+### ドメイン検証方法
+
+`scripts/verify_mcp_domain.sh` で、以下をまとめて確認できます。
+
+1. DNS解決
+2. TLS証明書（HTTPS）
+3. HTTP到達性
+
+実行例:
+
+```bash
+./scripts/verify_mcp_domain.sh http://example.com/mcp
+```
+
+### 検証結果（このリポジトリでの実行例）
+
+- 対象URL: `http://example.com/mcp`
+- DNS: 成功
+- TLS: スキップ（HTTP URLのため）
+- HTTPステータス: `403`（到達性は確認）
 
 ---
 
